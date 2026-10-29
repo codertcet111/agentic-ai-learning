@@ -1,0 +1,44 @@
+<!-- desc: LLMOps for shipping AI features safely: versioning prompts and configs, evaluating before release, canary rollouts, monitoring quality and cost, and rolling back model or prompt changes. -->
+<p>In a normal web service, behaviour changes when code changes. In an AI system, behaviour also changes when a prompt is edited, a tool description is reworded, a retrieval index is rebuilt or the model provider ships a new version. LLMOps is the discipline of treating all of those as releases.</p>
+
+<h2>Version everything that changes behaviour</h2>
+<table>
+  <thead><tr><th>Artifact</th><th>How to version it</th></tr></thead>
+  <tbody>
+    <tr><td>Prompts and policies</td><td>In the repository, reviewed like code</td></tr>
+    <tr><td>Tool catalog</td><td>Hash of the merged catalog, pinned per session</td></tr>
+    <tr><td>Model choice</td><td>Aliases in configuration, mapped to exact model versions</td></tr>
+    <tr><td>Retrieval index</td><td>Index version and embedding model id on every chunk</td></tr>
+    <tr><td>Evaluation sets</td><td>In the repository, next to the code they test</td></tr>
+  </tbody>
+</table>
+<p>Tag every trace with these versions. When quality drops, you need to know which one moved.</p>
+
+<h2>Evaluate before you ship</h2>
+<ol>
+  <li>On every pull request: golden cases with a stub model, for plumbing (see <a href="../llm-engineering/llm-stub-ci.html">LLM stub in CI</a>).</li>
+  <li>For prompt, tool or model changes: the same cases against the real model, several runs each, compared with the last approved baseline (see <a href="../evaluation/trace-compare.html">trace compare</a>).</li>
+  <li>Release gate: all safety and write cases pass; no significant regression in tool accuracy, cost or latency.</li>
+</ol>
+
+<h2>Roll out gradually</h2>
+<ul>
+  <li><strong>Feature flags</strong> per tenant or user group for new capabilities.</li>
+  <li><strong>Canary releases</strong>: route a small share of traffic to the new prompt or model, compare scores and error rates, then widen.</li>
+  <li><strong>Shadow runs</strong> for risky changes: run the new version on real inputs without showing its output, and compare offline.</li>
+</ul>
+
+<h2>Monitor what users actually get</h2>
+<p>After release, watch:</p>
+<ul>
+  <li>Error and failure rates by capability.</li>
+  <li>LLM calls, tokens and cost per turn.</li>
+  <li>Latency at p50 and p95.</li>
+  <li>Automated check scores and user feedback (see <a href="../evaluation/langfuse-scores.html">Langfuse scores</a>).</li>
+</ul>
+
+<h2>Make rollback boring</h2>
+<p>Every behaviour change should be reversible in minutes: switch a model alias back, revert a prompt commit, pin the previous catalog hash, or turn off a flag. Practise it before you need it. Provider model updates deserve special care. Pin exact model versions where the provider allows it, and test new versions before switching the alias.</p>
+
+<h2>Write it down</h2>
+<p>Keep a short changelog of behaviour changes: what changed, why, which evaluation results supported it. Six months later, it is the only reliable answer to "when did the assistant start doing that?"</p>

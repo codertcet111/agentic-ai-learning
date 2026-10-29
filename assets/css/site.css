@@ -1654,3 +1654,175 @@ a.byline:hover {
     bottom: -4.25rem;
   }
 }
+
+/* ---------- Career timeline (home page) ---------- */
+
+.journey {
+  --label-w: 13rem;
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  padding: 1.5rem 1.5rem 1.25rem;
+  background:
+    linear-gradient(var(--paper), var(--paper)) padding-box,
+    linear-gradient(120deg, #c9d0ff, #ffe9a3) border-box;
+  border: 1px solid transparent;
+}
+
+.j-axis,
+.j-row {
+  display: grid;
+  grid-template-columns: var(--label-w) 1fr;
+  column-gap: 1.25rem;
+  align-items: center;
+}
+
+.j-axis::before {
+  content: "";
+}
+
+.j-axis-track {
+  position: relative;
+  height: 1.6rem;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.j-tick {
+  position: absolute;
+  bottom: 0.2rem;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.j-now {
+  position: absolute;
+  right: 0;
+  bottom: 0.2rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--marker);
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+}
+
+.j-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.j-row {
+  padding: 0.55rem 0;
+  border-top: 1px dashed var(--rule);
+}
+
+.j-label {
+  font-family: var(--font-display);
+  font-weight: 650;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.j-label small {
+  display: block;
+  font-weight: 500;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.j-track {
+  position: relative;
+  height: 16px;
+  border-radius: 999px;
+  background-color: var(--wash);
+}
+
+.j-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  min-width: 6px;
+  box-shadow: 0 4px 12px -6px rgba(27, 37, 168, 0.55);
+  transform-origin: left center;
+  animation: j-grow 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.j-bar[data-to="now"] {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.j-rails { background: linear-gradient(90deg, #2b3cff, #7a5cff); }
+.j-cloud { background: linear-gradient(90deg, #1b25a8, #3d8bff); }
+.j-ios { background: linear-gradient(90deg, #7a5cff, #d36cf0); }
+.j-python { background: linear-gradient(90deg, #1f9d6b, #2fc4c4); }
+.j-react { background: linear-gradient(90deg, #13a6c9, #2b3cff); }
+.j-mgmt { background: linear-gradient(90deg, #f2c200, #ff8a4c); }
+.j-agentic { background: linear-gradient(90deg, #2b3cff, #9b5cff 55%, #ffd23f); }
+
+.j-dot {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-30%, -50%);
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid #e05a2b;
+}
+
+.j-pre-note {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.j-pre .j-track {
+  background: none;
+}
+
+.j-note {
+  margin: 0.9rem 0 0;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+@keyframes j-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .j-bar {
+    animation: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .journey {
+    padding: 1.1rem 1rem 1rem;
+  }
+  .j-axis,
+  .j-row {
+    grid-template-columns: 1fr;
+    row-gap: 0.35rem;
+  }
+  .j-axis::before {
+    display: none;
+  }
+  .j-tick:nth-child(even) {
+    visibility: hidden;
+  }
+}

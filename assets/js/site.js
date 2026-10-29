@@ -140,3 +140,55 @@
 
   render();
 })();
+
+/**
+ * Career timeline: lay the bars out against the current month, so the
+ * timeline always runs from July 2017 to the month the page is opened.
+ */
+(function () {
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const toIndex = (ym) => {
+    const [y, m] = ym.split("-").map(Number);
+    return y * 12 + (m - 1);
+  };
+  const label = (i) => `${MONTHS[i % 12]} ${Math.floor(i / 12)}`;
+  const duration = (months) => {
+    const y = Math.floor(months / 12);
+    const m = months % 12;
+    return [y ? `${y} yr${y > 1 ? "s" : ""}` : "", m ? `${m} mo${m > 1 ? "s" : ""}` : ""].filter(Boolean).join(" ") || "1 mo";
+  };
+
+  document.querySelectorAll(".journey").forEach((root) => {
+    const today = new Date();
+    const nowIndex = today.getFullYear() * 12 + today.getMonth();
+    const start = toIndex(root.dataset.start);
+    const end = nowIndex + 1;
+    const span = Math.max(1, end - start);
+    const pct = (i) => ((i - start) / span) * 100;
+
+    root.querySelectorAll(".j-bar").forEach((bar) => {
+      const a = toIndex(bar.dataset.from);
+      const b = bar.dataset.to === "now" ? end : toIndex(bar.dataset.to) + 1;
+      bar.style.left = pct(a) + "%";
+      bar.style.width = pct(b) - pct(a) + "%";
+      const name = bar.closest(".j-row").querySelector(".j-label").firstChild.textContent.trim();
+      const to = bar.dataset.to === "now" ? "now" : label(b - 1);
+      bar.title = `${name}: ${label(a)} to ${to} (${duration(b - a)})`;
+    });
+
+    const track = root.querySelector(".j-axis-track");
+    if (track) {
+      track.querySelectorAll(".j-tick").forEach((t) => t.remove());
+      const nowEl = track.querySelector("[data-j-now]");
+      for (let y = Math.floor(start / 12) + 1; y <= today.getFullYear(); y++) {
+        if (pct(y * 12) >= 90) continue; // leave room for the "now" label
+        const t = document.createElement("span");
+        t.className = "j-tick";
+        t.style.left = pct(y * 12) + "%";
+        t.textContent = String(y);
+        track.insertBefore(t, nowEl);
+      }
+      if (nowEl) nowEl.textContent = label(nowIndex);
+    }
+  });
+})();

@@ -1,0 +1,49 @@
+<!-- desc: What AI engineers need to know about LLM inference: time to first token, throughput, batching, KV cache, quantization, streaming, caching and the trade-offs between hosted APIs and self-hosting. -->
+<p>Users judge an assistant by how fast it feels, and finance judges it by what it costs. Both come down to inference: the work of running the model for each request. You do not need to write GPU kernels, but you should know the vocabulary and the levers.</p>
+
+<h2>Two latencies, not one</h2>
+<ul>
+  <li><strong>Time to first token (TTFT)</strong>: how long before anything appears. Driven by queueing, network and processing the input prompt. Long prompts raise it.</li>
+  <li><strong>Output speed</strong>: tokens per second once generation starts. Driven by model size and server load. Long replies take proportionally longer.</li>
+</ul>
+<p>Total time is roughly TTFT plus output tokens divided by speed. An agent turn often makes several calls in sequence, so these add up quickly.</p>
+
+<h2>What happens on the server</h2>
+<table>
+  <thead><tr><th>Technique</th><th>What it does</th><th>Why you care</th></tr></thead>
+  <tbody>
+    <tr><td>Batching</td><td>Processes many requests together on the same hardware</td><td>Higher throughput and lower cost per token; can add a little queueing delay</td></tr>
+    <tr><td>KV cache</td><td>Keeps attention state for tokens already processed</td><td>Makes generating each new token cheap; also enables prompt caching</td></tr>
+    <tr><td>Prompt caching</td><td>Reuses work for a repeated prompt prefix across requests</td><td>Cheaper, faster input when system prompt and tools stay identical</td></tr>
+    <tr><td>Quantization</td><td>Stores weights in fewer bits (for example 8 or 4)</td><td>Fits larger models on less hardware, faster, with some quality risk</td></tr>
+    <tr><td>Speculative decoding</td><td>A small model drafts tokens that the large model verifies</td><td>Faster output with the large model's quality</td></tr>
+  </tbody>
+</table>
+
+<h2>Levers you control</h2>
+<ol>
+  <li><strong>Fewer calls per turn.</strong> Recipes, better tool descriptions and summarised tool results cut replanning (see <a href="../build-guides/cost-controls.html">cost controls</a>).</li>
+  <li><strong>Smaller prompts.</strong> Filter tools, trim history, summarise retrieved text.</li>
+  <li><strong>Stable prefixes.</strong> Put unchanging content first so prompt caching applies.</li>
+  <li><strong>Right-sized models.</strong> Small models for routing and extraction, large ones for hard planning (see <a href="../llm-engineering/model-routing.html">model routing</a>).</li>
+  <li><strong>Streaming.</strong> Users perceive speed from the first words (see <a href="../llm-engineering/streaming-dev.html">streaming</a>).</li>
+  <li><strong>Parallel calls.</strong> Run independent tool calls and reads concurrently.</li>
+  <li><strong>Cap output.</strong> Set max tokens per purpose.</li>
+</ol>
+
+<h2>Hosted API or self-hosted?</h2>
+<table>
+  <thead><tr><th></th><th>Hosted API</th><th>Self-hosted open model</th></tr></thead>
+  <tbody>
+    <tr><td>Start-up effort</td><td>Minutes</td><td>Days to weeks</td></tr>
+    <tr><td>Cost at low volume</td><td>Low, pay per token</td><td>High, you pay for idle GPUs</td></tr>
+    <tr><td>Cost at steady high volume</td><td>Can become significant</td><td>Can be lower if utilisation is high</td></tr>
+    <tr><td>Data control</td><td>Depends on provider terms and region</td><td>Full</td></tr>
+    <tr><td>Model quality ceiling</td><td>Usually highest</td><td>Depends on available open models</td></tr>
+    <tr><td>Operations</td><td>Provider's problem</td><td>Yours: scaling, upgrades, monitoring</td></tr>
+  </tbody>
+</table>
+<p>Many teams start hosted, measure real usage for a few months, and only then consider self-hosting specific high-volume, narrow tasks.</p>
+
+<h2>Measure it</h2>
+<p>Record TTFT, total duration, input and output tokens and cost for every LLM call, tagged by purpose and model. Watch the p95, not just the average: one slow call in a five-call turn makes the whole turn slow.</p>

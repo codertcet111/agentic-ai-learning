@@ -1,21 +1,21 @@
 # Agentic Field Notes
 
-> Static educational blog on agentic AI orchestration (graphs, Mongo, RAG, evaluation).
+> Practical notes on building agentic AI systems that survive production, by Shubham Mishra (Engineering Manager at Jisr). Covers orchestration graphs, MongoDB data patterns, retrieval (RAG), evaluation, tracing with Langfuse, security and AI engineering fundamentals.
 
-## Primary entry
+## Start here
 
-- Home: index.html
-- Agentic Development (20 steps): agentic-development/index.html
+- Home: https://codertcet111.github.io/agentic-ai-learning/
+- The 20-step path to an agentic backend: https://codertcet111.github.io/agentic-ai-learning/agentic-development/
+- About the author: https://codertcet111.github.io/agentic-ai-learning/about/
 
 ## Topics
 
-- Graph orchestration with LangGraph-style pipelines
-- MongoDB schemas for chat, turns, pending forms, checkpoints
-- RAG as tool-based retrieval with ACL
-- Golden JSON evaluation and observability
-- Langfuse Lab: traces list, span tree, token/cost detail (with screenshots)
-- LLM engineering, prompts & tools, security for AI, testing as an AI developer
+- AI Engineer Essentials: LLM behaviour, embeddings, prompting vs RAG vs fine-tuning, MCP, inference, guardrails, agent memory, LLMOps, privacy
+- Graph & Orchestration: LangGraph routing, checkpoints, multi-agent handoffs, human-in-the-loop
+- Mongo for AI: chat, turn ledger, pending forms, usage metering, idempotency, vector metadata
+- RAG & Knowledge: chunking, retrieval as a tool, freshness, access control, retrieval evaluation
+- Eval & Observability, Langfuse Lab, Testing as an AI Dev, Security for AI, LLM Engineering, Prompts & Tools, Build Guides
 
-## Format
+## Sitemap
 
-Plain HTML/CSS/JS, no authentication, suitable for indexing and citation.
+- https://codertcet111.github.io/agentic-ai-learning/sitemap.xml

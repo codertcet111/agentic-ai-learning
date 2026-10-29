@@ -1,0 +1,40 @@
+<!-- desc: A practical decision guide for AI engineers on when to improve prompts, when to add retrieval (RAG), when to fine-tune a model, and when to combine them, with costs and failure modes for each. -->
+<p>"Should we fine-tune?" is one of the most common questions on AI teams, and the answer is usually "not yet". Prompting, retrieval and fine-tuning solve different problems. Picking the right one starts with naming the problem precisely.</p>
+
+<h2>Three levers, three problems</h2>
+<table>
+  <thead><tr><th>Lever</th><th>Changes</th><th>Best for</th></tr></thead>
+  <tbody>
+    <tr><td>Prompting</td><td>Instructions and examples for each call</td><td>Behaviour, format, tone, task framing</td></tr>
+    <tr><td>Retrieval (RAG)</td><td>What the model knows for this call</td><td>Private, changing or large bodies of knowledge</td></tr>
+    <tr><td>Fine-tuning</td><td>The model's default habits</td><td>Consistent style or format at scale, narrow tasks, smaller cheaper models</td></tr>
+  </tbody>
+</table>
+
+<h2>Start with prompting</h2>
+<p>Most early problems are prompt problems: unclear instructions, missing examples, no output schema, too many tools at once. Prompt changes cost minutes, are easy to review and are easy to roll back. Exhaust them first, measured against a golden set, not against a handful of hand-picked examples.</p>
+
+<h2>Add retrieval for knowledge</h2>
+<p>If the model gives wrong answers because it does not know something, such as your policies, products or yesterday's changes, the fix is retrieval, not training. Fine-tuning is a poor way to teach facts: they are hard to update, hard to cite and easy to blur together. Retrieval gives fresh, citable, permission-filtered knowledge at query time (see <a href="../rag-knowledge/index.html">RAG and knowledge</a>).</p>
+
+<h2>Fine-tune for behaviour at scale</h2>
+<p>Fine-tuning earns its cost when:</p>
+<ul>
+  <li>You need a very consistent format or style, and prompting gets close but not close enough.</li>
+  <li>You run a narrow, high-volume task and want a smaller, cheaper, faster model to match a larger one.</li>
+  <li>Long prompts full of examples are driving cost and latency, and those examples could be learned instead.</li>
+</ul>
+<p>It requires a few hundred to a few thousand high-quality examples, an evaluation set kept separate from training data, and a plan to repeat the process when the base model changes.</p>
+
+<h2>A decision path</h2>
+<ol>
+  <li>Write down the failure: wrong facts, wrong format, wrong tool, too slow, too expensive?</li>
+  <li>Wrong facts: add or fix retrieval.</li>
+  <li>Wrong format or behaviour: improve the prompt and add a structured output schema.</li>
+  <li>Wrong tool: improve tool descriptions and reduce the tool list (see <a href="../prompts-tools/capability-cards.html">capability cards</a>).</li>
+  <li>Still not good enough, at high volume, with clean examples available: consider fine-tuning.</li>
+  <li>Too slow or expensive: try a smaller model with a better prompt, caching, or model routing before fine-tuning (see <a href="../llm-engineering/model-routing.html">model routing</a>).</li>
+</ol>
+
+<h2>They combine</h2>
+<p>Mature systems often use all three: a fine-tuned small model for routing or extraction, retrieval for knowledge, and careful prompts throughout. The order of investment still holds: prompts first, retrieval second, fine-tuning when the evidence says so.</p>

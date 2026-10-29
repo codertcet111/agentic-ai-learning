@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot generator for static-blog HTML pages. Output is plain HTML/CSS/JS only."""
+"""Builds every page of Agentic Field Notes from the article files. Output is plain HTML, CSS and JS."""
 
 from __future__ import annotations
 
@@ -467,7 +467,7 @@ OTHER_SECTIONS: dict[str, dict] = {
         "pages": [
             ("golden-files", "Golden JSON cases", "eval", """
 <p>One file per scenario with tags (domain, risk, multi-turn). Validate against a JSON Schema in CI.</p>
-""", {"Tag": "Label for filtering suites in CI.", "Fixture": "Static input/output pair for tests."}),
+""", {"Tag": "Label for filtering suites in CI.", "Fixture": "Fixed input/output pair for tests."}),
             ("llm-judges", "LLM-as-judge—with guardrails", "eval", """
 <p>Use judges only for rubric scores, not safety allow/deny. Prefer deterministic asserts on capability ids for writes.</p>
 """, {"Rubric": "Scoring criteria given to a judge model.", "Deterministic assert": "Exact match expectation in tests."}),
@@ -507,7 +507,7 @@ OTHER_SECTIONS: dict[str, dict] = {
 SITE_NAME = "Agentic Field Notes"
 # Shown in the byline, footer and About section. Leave empty for a generic byline.
 AUTHOR_NAME = os.environ.get("AUTHOR_NAME", "Shubham Mishra")
-AUTHOR_ROLE = "AI application developer"
+AUTHOR_ROLE = "Engineering Manager and AI engineer"
 GITHUB_URL = "https://github.com/codertcet111"
 REPO_URL = "https://github.com/codertcet111/agentic-ai-learning"
 
@@ -542,6 +542,75 @@ def social_icons_html() -> str:
     return f'<ul class="social-links">{items}</ul>'
 
 
+# Career timeline on the home page. Dates are "YYYY-MM"; None means "until now".
+# The browser recomputes the bars for the current month whenever the page is opened.
+JOURNEY_START = "2017-07"
+JOURNEY = [
+    ("Ruby on Rails", "rails", [("2017-07", None)]),
+    ("AWS and PostgreSQL", "cloud", [("2017-07", None)]),
+    ("iOS with Swift", "ios", [("2017-07", "2020-06")]),
+    ("Python", "python", [("2018-01", "2019-05"), ("2026-03", None)]),
+    ("React", "react", [("2018-01", "2021-12"), ("2026-01", None)]),
+    ("Engineering management", "mgmt", [("2022-03", None)]),
+    ("Agentic AI", "agentic", [("2026-03", None)]),
+]
+JOURNEY_NOTE = ("Also along the way: C++ in college, Apache Kafka, Amazon SQS, "
+                "and Datadog for monitoring (five Datadog certifications in 2025).")
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
+def _month_index(ym: str) -> int:
+    y, m = ym.split("-")
+    return int(y) * 12 + int(m) - 1
+
+
+def _month_label(ym: str) -> str:
+    y, m = ym.split("-")
+    return f"{MONTHS[int(m) - 1]} {y}"
+
+
+def journey_html() -> str:
+    from datetime import date
+    today = date.today()
+    now = f"{today.year}-{today.month:02d}"
+    start, end = _month_index(JOURNEY_START), _month_index(now) + 1
+    span = end - start
+
+    def pct(i):
+        return round((i - start) / span * 100, 3)
+
+    ticks = "".join(
+        f'<span class="j-tick" style="left:{pct(y * 12)}%">{y}</span>'
+        for y in range(int(JOURNEY_START[:4]) + 1, today.year + 1)
+        if pct(y * 12) < 90
+    )
+    rows = []
+    for label, kind, periods in JOURNEY:
+        bars, spans = [], []
+        for frm, to in periods:
+            a = _month_index(frm)
+            b = (_month_index(to) + 1) if to else end
+            text = f"{_month_label(frm)} to {_month_label(to) if to else 'now'}"
+            spans.append(text)
+            bars.append(
+                f'<span class="j-bar j-{kind}" data-from="{frm}" data-to="{to or "now"}" '
+                f'style="left:{pct(a)}%;width:{pct(b) - pct(a)}%" title="{label}: {text}"></span>'
+            )
+        rows.append(
+            f'<li class="j-row"><span class="j-label">{esc(label)}'
+            f'<small data-j-dates>{esc("; ".join(spans))}</small></span>'
+            f'<span class="j-track">{"".join(bars)}</span></li>'
+        )
+    pre = ('<li class="j-row j-pre"><span class="j-label">Java<small>During college, before 2017</small></span>'
+           '<span class="j-track"><span class="j-dot" title="Java: during college, before 2017"></span>'
+           '<span class="j-pre-note">College days</span></span></li>')
+    return f"""<div class="journey" data-start="{JOURNEY_START}">
+  <div class="j-axis" aria-hidden="true"><span class="j-axis-track">{ticks}<span class="j-now" data-j-now>{_month_label(now)}</span></span></div>
+  <ol class="j-rows">{pre}{"".join(rows)}</ol>
+  <p class="j-note">{esc(JOURNEY_NOTE)}</p>
+</div>"""
+
+
 def progress_id(key: str) -> str:
     """Short, stable id for an article, stored in the progress cookie."""
     n = zlib.crc32(key.encode("utf-8")) % (36 ** 4)
@@ -574,6 +643,7 @@ TOPIC_GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
         ("build-guides", "Build Guides", "Ship a first feature, add writes, run it locally, control cost"),
     ]),
     ("Models and knowledge", [
+        ("ai-engineer-essentials", "AI Engineer Essentials", "LLM basics, embeddings, MCP, serving, guardrails, memory"),
         ("llm-engineering", "LLM Engineering", "Gateways, structured outputs, stubs, context windows"),
         ("prompts-tools", "Prompts & Tools", "Tool descriptions, planner policy, lookups, two languages"),
         ("rag-knowledge", "RAG & Knowledge", "Chunking, retrieval as a tool, freshness and access control"),
@@ -609,7 +679,7 @@ def esc(text: str) -> str:
 
 
 def public_url(canonical_path: str) -> str:
-    return SITE_URL + canonical_path.replace("/static-blog", "", 1)
+    return SITE_URL + canonical_path
 
 
 def author_label() -> str:
@@ -848,7 +918,7 @@ def write_agentic_pages() -> list[str]:
             section_id="agentic-development",
             title="Agentic Development",
             intro="A twenty-step path to designing and shipping an agentic backend that holds up in production.",
-            canonical_path="/static-blog/agentic-development/",
+            canonical_path="/agentic-development/",
             list_html=f'<ol class="article-list numbered">{items_html}</ol>',
             extra=intro_extra,
             progress_ids=ids,
@@ -870,7 +940,7 @@ def write_agentic_pages() -> list[str]:
                 title=f"Step {i}: {step_label(step['title'])}",
                 heading=step_label(step["title"]),
                 description=step["_desc"],
-                canonical_path=f"/static-blog/agentic-development/{fname}",
+                canonical_path=f"/agentic-development/{fname}",
                 depth=2,
                 crumbs=[("Home", "../../index.html"), ("Agentic Development", "../index.html"), (f"Step {i} of {n}", None)],
                 body=step["_body"] + dev_html,
@@ -908,7 +978,7 @@ def write_other_sections() -> list[str]:
                 section_id=section_id,
                 title=meta["title"],
                 intro=meta["index_intro"],
-                canonical_path=f"/static-blog/{section_id}/",
+                canonical_path=f"/{section_id}/",
                 list_html=f'<ul class="article-list">{items}</ul>',
                 progress_ids=ids,
             ),
@@ -925,7 +995,7 @@ def write_other_sections() -> list[str]:
                     section_id=section_id,
                     title=title,
                     description=desc,
-                    canonical_path=f"/static-blog/{section_id}/{fname}",
+                    canonical_path=f"/{section_id}/{fname}",
                     depth=1,
                     crumbs=[("Home", "../index.html"), (meta["title"], "index.html"), (title, None)],
                     body=expand_body(body, 1),
@@ -1023,16 +1093,15 @@ def write_home(section_ids: dict[str, list[str]]) -> None:
   <div class="topic-columns">{columns_html}</div>
 </section>
 
-<section class="home-section" id="about" aria-labelledby="about-title">
-  <div class="about">
-    <img src="assets/images/author/avatar.jpg" alt="" width="96" height="96" loading="lazy">
+<section class="home-section" id="journey" aria-labelledby="journey-title">
+  <div class="section-head">
     <div>
-      <h2 id="about-title">About me</h2>
-      <p>I'm {esc(AUTHOR_NAME)}. I have built web products with Ruby on Rails since 2017, shipped iOS apps in Swift from 2017 to 2020, and spent four years on React before coming back to it in 2026. Since March 2026 I have been building agentic AI systems, and AI automation is where most of my curiosity goes now.</p>
-      <p>This site collects what worked, what broke, and the patterns I would use again. It is plain HTML and CSS, with no ads and no tracking.</p>
-      <div class="about-actions"><a class="button secondary" href="about/index.html">More about me</a>{social_icons_html()}</div>
+      <h2 id="journey-title">My journey</h2>
+      <p>Software development from July 2017 to this month. Hover a bar for exact dates.</p>
     </div>
+    <a href="about/index.html">Full profile and details</a>
   </div>
+  {journey_html()}
 </section>"""
     schema = {
         "@context": "https://schema.org",
@@ -1047,7 +1116,7 @@ def write_home(section_ids: dict[str, list[str]]) -> None:
             title=SITE_NAME,
             full_title=f"{SITE_NAME}: building agentic AI systems that survive production",
             description="Practical notes on building agentic AI systems: orchestration graphs, MongoDB patterns, RAG, evaluation and tracing.",
-            canonical_path="/static-blog/",
+            canonical_path="/",
             depth=0,
             main=main,
             current=None,
@@ -1064,18 +1133,49 @@ def write_about() -> None:
         f'<li><a href="{url}" rel="me noopener" target="_blank">{icon_svg(icon)}<span>{name}</span><small>{esc(note)}</small></a></li>'
         for name, url, icon, note in SOCIAL_LINKS
     )
-    timeline = [
-        ("2017 to 2020", "iOS with Swift", "Three years of native iOS development at the start of my career.", False),
-        ("2017 to today", "Ruby on Rails", "About nine years of building web applications with Rails, and still part of my daily work.", False),
-        ("Earlier in my career", "React", "Four years of front-end development with React.", False),
-        ("2026", "Back to React", "Returned to React this year, now for chat and agent interfaces.", False),
-        ("March 2026 to today", "Agentic AI development", "Designing and building agent backends: orchestration graphs, tool catalogs, MongoDB data planes, retrieval, evaluation and tracing. Most of this site comes from this work.", True),
+
+    def rows(items):
+        return "".join(
+            f'<li><span class="when">{esc(when)}</span><span class="what">{esc(what)}</span>'
+            + (f"<p>{esc(text)}</p>" if text else "") + "</li>"
+            for when, what, text in items
+        )
+
+    experience = [
+        ("Now", "Engineering Manager, Jisr", "Leading several domain teams across backend and frontend."),
+        ("Earlier", "Circles.life", "Software engineering; received the Q3 Quantum Leap Award in November 2021."),
+        ("Earlier", "Mirraw.com", "Ruby on Rails and iOS development, API optimisation and web application security."),
     ]
-    now_attr = ' class="now"'
-    tl = "".join(
-        f'<li{now_attr if now else ""}><span class="when">{esc(when)}</span><span class="what">{esc(what)}</span><p>{esc(text)}</p></li>'
-        for when, what, text, now in timeline
-    )
+    skills = [
+        ("Since July 2017", "Ruby on Rails, AWS and PostgreSQL", "The core of my work for over nine years."),
+        ("July 2017 to 2020", "iOS with Swift", "Native apps, including a sales management app and an app for Hajj pilgrims (2019)."),
+        ("January 2018 to May 2019", "Python", "And again since 2026, alongside agentic AI work."),
+        ("Four years, and again in 2026", "React", "Front-end development, now for chat and agent interfaces."),
+        ("Since March 2022", "Engineering management", "Running teams, hiring, planning and delivery."),
+        ("Since March 2026", "Agentic AI development", "Agent backends: orchestration graphs, tool catalogs, retrieval, evaluation and tracing."),
+        ("College", "Java and C++", "Where it started."),
+        ("Along the way", "Kafka, Amazon SQS and Datadog", "Event streaming, queues and production monitoring."),
+    ]
+    certs = [
+        ("Jul 2025", "ACP: Agent Communication Protocol", "DeepLearning.AI"),
+        ("May 2025", "Datadog: APM Metrics and Traces; Incident Management; Infrastructure and Cloud Network Monitoring; Log Explorer; Service Level Objectives and APM Monitoring", "Datadog, five certifications"),
+        ("Jan 2024", "Software Architecture and Technology for Large-Scale Systems", "Udemy"),
+        ("Aug 2022", "AWS S3 Master Course", "Udemy"),
+        ("Jul 2022", "Web Architecture with Go", "Udemy"),
+    ]
+    projects = [
+        ("Apr to May 2020", "Diamond e-commerce website", "Search, filtering and detailed attributes for buying diamonds online. Ruby on Rails, PostgreSQL and JavaScript."),
+        ("Aug to Sep 2019", "SaleSure", "iOS app for sales management."),
+        ("Jul to Aug 2019", "Alrittco", "iOS app for Hajj."),
+        ("Feb 2019", "Eat Bouncing Ball", "A small JavaScript game."),
+        ("Nov 2016 to Mar 2017", "Obstacle-detecting smart cane", "An Arduino-based cane with sensors to help visually impaired people navigate. My final-year engineering project, which placed second runner-up at TCET."),
+    ]
+    awards = [
+        ("Nov 2021", "Q3 Quantum Leap Award", "Circles.life"),
+        ("2017", "JRD Tata Trust scholarship, three times", "It paid three years of my engineering tuition."),
+        ("Mar 2017", "Second runner-up, final-year project", "Thakur College of Engineering and Technology"),
+    ]
+
     main = f"""<header class="page-head grid-paper wide">
   <div class="page-head-inner">
     {breadcrumb_html([("Home", "../index.html"), ("About", None)])}
@@ -1083,7 +1183,7 @@ def write_about() -> None:
       <img src="../assets/images/author/portrait.jpg" alt="Portrait of {esc(AUTHOR_NAME)}" width="720" height="900">
       <div>
         <h1>{esc(AUTHOR_NAME)}</h1>
-        <p class="lead">Software engineer building agentic AI systems, with a long background in Ruby on Rails, React and iOS.</p>
+        <p class="lead">Engineering Manager at Jisr, building agentic AI systems, with nine years of Ruby on Rails, AWS and PostgreSQL behind it. Based in Mumbai.</p>
         {social_icons_html()}
       </div>
     </div>
@@ -1092,22 +1192,39 @@ def write_about() -> None:
 <div class="prose">
 <h2>At a glance</h2>
 <dl class="glance">
-  <div><dt>Ruby on Rails</dt><dd>Since 2017, about nine years</dd></div>
+  <div><dt>Engineering management</dt><dd>Since March 2022; now at Jisr</dd></div>
+  <div><dt>Ruby on Rails, AWS, PostgreSQL</dt><dd>Since July 2017</dd></div>
   <div><dt>Agentic AI</dt><dd>Building agents since March 2026</dd></div>
-  <div><dt>React</dt><dd>Four years earlier, and again since 2026</dd></div>
-  <div><dt>iOS with Swift</dt><dd>Three years, 2017 to 2020</dd></div>
+  <div><dt>Mobile and front end</dt><dd>iOS 2017 to 2020; React for four years, and again in 2026</dd></div>
 </dl>
 
 <h2>What I work on now</h2>
-<p>Since March 2026 my focus has been agentic AI: assistants that plan, call real business APIs on a user's behalf, pause for confirmation and keep conversations consistent under load. Years of Rails work shape how I approach it: business rules belong in the domain services, the agent orchestrates, and every write needs a clear owner.</p>
+<p>I lead engineering teams and, since March 2026, build agentic AI systems: assistants that plan, call real business APIs on a user's behalf, pause for confirmation and keep conversations consistent under load. Years of Rails work shape how I approach it: business rules belong in the domain services, the agent orchestrates, and every write needs a clear owner.</p>
 <p>I am especially interested in <strong>AI automation</strong>: taking repetitive, multi-step work that people do across several tools and handing it to agents that are observable, testable and safe to run.</p>
 
 <h2>Experience</h2>
-<ol class="timeline">{tl}</ol>
+<ol class="timeline">{rows(experience)}</ol>
+
+<h2>Skills over time</h2>
+<ol class="timeline">{rows(skills)}</ol>
+
+<h2>Education</h2>
+<ol class="timeline"><li class="now"><span class="when">2013 to 2017</span><span class="what">Bachelor of Engineering, Thakur College of Engineering and Technology, Mumbai</span><p>Supported by the JRD Tata Trust scholarship for three years.</p></li></ol>
+
+<h2>Publication</h2>
+<p><strong>Improved KNN algorithm</strong>, International Journal of Computer Applications (IJCA), November 2017.</p>
+
+<h2>Certifications</h2>
+<ol class="timeline">{rows(certs)}</ol>
+
+<h2>Projects</h2>
+<ol class="timeline">{rows(projects)}</ol>
+
+<h2>Honours and awards</h2>
+<ol class="timeline">{rows(awards)}</ol>
 
 <h2>About this site</h2>
-<p>Agentic Field Notes is where I write down patterns from building agent backends: the <a href="../agentic-development/index.html">20-step path</a> from first boundary to golden tests, and deeper notes on <a href="../graph-orchestration/index.html">graph orchestration</a>, <a href="../data-patterns/index.html">MongoDB patterns</a>, <a href="../rag-knowledge/index.html">retrieval</a>, <a href="../evaluation/index.html">evaluation</a> and <a href="../langfuse-lab/index.html">tracing with Langfuse</a>. Examples are generic on purpose, so you can map them onto your own domain.</p>
-<p>The site is plain HTML, CSS and a little JavaScript, hosted free on GitHub Pages. Your reading progress is stored in a cookie in your own browser and is never sent anywhere. The source is on <a href="{REPO_URL}">GitHub</a>.</p>
+<p>Agentic Field Notes is where I write down patterns from building agent backends: the <a href="../agentic-development/index.html">20-step path</a> from first boundary to golden tests, <a href="../ai-engineer-essentials/index.html">AI engineer essentials</a>, and deeper notes on <a href="../graph-orchestration/index.html">graph orchestration</a>, <a href="../data-patterns/index.html">MongoDB patterns</a>, <a href="../rag-knowledge/index.html">retrieval</a>, <a href="../evaluation/index.html">evaluation</a> and <a href="../langfuse-lab/index.html">tracing with Langfuse</a>. Your reading progress is stored in a cookie in your own browser and is never sent anywhere. The source is on <a href="{REPO_URL}">GitHub</a>.</p>
 
 <h2>Find me elsewhere</h2>
 <ul class="profile-list">{profiles}</ul>
@@ -1122,8 +1239,8 @@ def write_about() -> None:
     (ROOT / "about" / "index.html").write_text(
         document(
             title=f"About {AUTHOR_NAME}",
-            description=f"{AUTHOR_NAME}: software engineer building agentic AI systems, with a background in Ruby on Rails since 2017, React and iOS.",
-            canonical_path="/static-blog/about/",
+            description=f"{AUTHOR_NAME}: Engineering Manager at Jisr building agentic AI systems, with Ruby on Rails, AWS and PostgreSQL since 2017, iOS, React and Python.",
+            canonical_path="/about/",
             depth=1,
             main=main,
             current="about",
@@ -1140,7 +1257,7 @@ def write_404() -> None:
     page = document(
         title="Page not found",
         description="This page does not exist.",
-        canonical_path="/static-blog/404.html",
+        canonical_path="/404.html",
         depth=0,
         main=f"""<div class="not-found">
   <h1>That page isn't here</h1>
@@ -1152,7 +1269,7 @@ def write_404() -> None:
     )
     page = page.replace('href="assets/', f'href="{base}/assets/').replace('src="assets/', f'src="{base}/assets/')
     page = page.replace('href="index.html', f'href="{base}/index.html').replace('href="agentic-development/', f'href="{base}/agentic-development/')
-    page = re.sub(r'href="(about|graph-orchestration|data-patterns|build-guides|llm-engineering|prompts-tools|rag-knowledge|evaluation|langfuse-lab|testing-ai-dev|security-ai)/', rf'href="{base}/\1/', page)
+    page = re.sub(r'href="(about|ai-engineer-essentials|graph-orchestration|data-patterns|build-guides|llm-engineering|prompts-tools|rag-knowledge|evaluation|langfuse-lab|testing-ai-dev|security-ai)/', rf'href="{base}/\1/', page)
     page = page.replace('href="sitemap.xml"', f'href="{base}/sitemap.xml"')
     page = page.replace('<meta name="robots" content="index, follow">', '<meta name="robots" content="noindex">')
     (ROOT / "404.html").write_text(page, encoding="utf-8")

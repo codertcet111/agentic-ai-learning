@@ -1,0 +1,46 @@
+<!-- desc: How large language models behave in practice: tokens, context windows, next-token sampling, temperature, why they hallucinate and what that means for the systems you build around them. -->
+<p>You do not need to train a model to build good AI products, but you do need an accurate picture of what a model does when you call it. Most surprising LLM behaviour stops being surprising once you hold four ideas in your head: tokens, context, sampling and the absence of a fact store.</p>
+
+<h2>Tokens, not words</h2>
+<p>A model reads and writes <strong>tokens</strong>: chunks of text produced by a tokenizer. In English a token averages about three quarters of a word, but numbers, code, rare names and non-Latin scripts often split into many more tokens. This matters because:</p>
+<ul>
+  <li>Pricing and limits are counted in tokens, so the same message costs more in some languages than others.</li>
+  <li>Models can struggle with tasks that depend on characters inside a token, such as counting letters or reversing strings.</li>
+  <li>Token counts, not character counts, decide whether your prompt fits.</li>
+</ul>
+
+<h2>The context window is the whole world</h2>
+<p>For each call, the model sees only what is in its <strong>context window</strong>: system prompt, conversation, tool results and retrieved documents. It has no memory of earlier calls unless you send that history again. Everything an assistant "remembers" is something your code chose to put back in the prompt (see <a href="agent-memory.html">agent memory</a>).</p>
+<p>Long windows help, but they are not free. Cost and latency grow with input size, and models tend to use information at the start and end of a long context more reliably than material buried in the middle. Put instructions and the most important facts where they are hard to miss, and keep the rest lean.</p>
+
+<h2>Generation is sampling</h2>
+<p>A model produces a probability distribution over the next token, picks one, appends it and repeats. Settings shape how it picks:</p>
+<table>
+  <thead><tr><th>Setting</th><th>Effect</th><th>Typical use</th></tr></thead>
+  <tbody>
+    <tr><td>Temperature</td><td>Lower values make the most likely tokens more likely; higher values add variety</td><td>Low for extraction, planning and code; moderate for writing</td></tr>
+    <tr><td>Top-p</td><td>Restricts choices to the smallest set of tokens covering probability p</td><td>Usually leave at the default and tune temperature instead</td></tr>
+    <tr><td>Max output tokens</td><td>Hard cap on reply length</td><td>Always set it; it bounds cost and latency</td></tr>
+    <tr><td>Stop sequences</td><td>End generation when a string appears</td><td>Simple structured formats</td></tr>
+  </tbody>
+</table>
+<p>Even at temperature zero, outputs are not guaranteed to be identical across runs or model versions. Design tests and pipelines that tolerate small variations (see <a href="../evaluation/golden-files.html">golden cases</a>).</p>
+
+<h2>Why models hallucinate</h2>
+<p>A model has no lookup table of facts. It generates text that is statistically plausible given its training and the context. When the context lacks the answer, the most plausible continuation is often a confident, specific and wrong one. This is the root of hallucination, and it shapes good architecture:</p>
+<ul>
+  <li>Facts about the user's own data come from <strong>tools</strong>, not from the model.</li>
+  <li>Facts about documents come from <strong>retrieval with citations</strong>.</li>
+  <li>The prompt tells the model what to do when information is missing: ask, or say it does not know.</li>
+</ul>
+
+<h2>Instructions are strong suggestions</h2>
+<p>System prompts steer behaviour well, but they are not enforcement. A determined user, or text inside a retrieved document, can sometimes pull the model off course. Anything that must always hold, such as permissions, limits or confirmation before a write, belongs in code around the model (see <a href="guardrails-prompt-injection.html">guardrails</a>).</p>
+
+<h2>What this means day to day</h2>
+<ol>
+  <li>Measure prompts in tokens and watch them in traces.</li>
+  <li>Use low temperature and structured outputs for decisions; save creativity for prose.</li>
+  <li>Ground every factual answer in a tool result or a cited document.</li>
+  <li>Keep hard rules in code, not in prompt wording.</li>
+</ol>

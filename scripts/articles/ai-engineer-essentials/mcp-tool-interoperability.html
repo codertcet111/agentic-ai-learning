@@ -1,0 +1,47 @@
+<!-- desc: The Model Context Protocol (MCP) explained for AI engineers: hosts, clients and servers, tools, resources and prompts, transports, and how to expose your own APIs to agents safely. -->
+<p>Every agent needs tools, and for a long time every framework described tools its own way. The <strong>Model Context Protocol (MCP)</strong> is an open standard, introduced by Anthropic in late 2024 and since adopted widely, for connecting AI applications to tools and data through one common interface. Write a tool integration once as an MCP server, and any MCP-capable application can use it.</p>
+
+<h2>The moving parts</h2>
+<ul>
+  <li><strong>Host</strong>: the AI application the user interacts with, such as a desktop assistant, an IDE or your own agent backend.</li>
+  <li><strong>Client</strong>: the connector inside the host that talks to one server.</li>
+  <li><strong>Server</strong>: a program that exposes capabilities, for example "search tickets" or "read this database".</li>
+</ul>
+
+<h2>What a server can offer</h2>
+<table>
+  <thead><tr><th>Primitive</th><th>What it is</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td>Tools</td><td>Functions the model can call, with a JSON Schema for inputs</td><td><code>create_ticket(title, priority)</code></td></tr>
+    <tr><td>Resources</td><td>Data the application can read and put in context</td><td>A file, a database row, a document</td></tr>
+    <tr><td>Prompts</td><td>Reusable prompt templates the user can pick</td><td>"Summarise this incident"</td></tr>
+  </tbody>
+</table>
+<p>Messages use JSON-RPC. Servers run either locally, talking to the host over standard input and output, or remotely over HTTP, usually with OAuth for authorisation.</p>
+
+<h2>How it relates to your agent backend</h2>
+<p>MCP describes the same idea as the <a href="../agentic-development/steps/09-capability-catalog.html">capability catalog</a> in the 20-step path: named tools, typed parameters and a clear owner. You can use it on either side:</p>
+<ul>
+  <li><strong>As a client</strong>: your orchestrator connects to existing MCP servers instead of writing a custom provider for each service.</li>
+  <li><strong>As a server</strong>: you wrap your domain APIs as an MCP server, so assistants and IDEs across your company can use them with the same permissions as your own agent.</li>
+</ul>
+
+<h2>Security still lives with you</h2>
+<p>A standard interface does not make a tool safe. Treat MCP servers like any other integration:</p>
+<ul>
+  <li><strong>Least privilege</strong>: expose only the tools a use case needs, scoped to the signed-in user.</li>
+  <li><strong>Confirm writes</strong>: tools that change data should require explicit confirmation (see <a href="../security-ai/write-confirmation.html">write confirmation</a>).</li>
+  <li><strong>Trust carefully</strong>: a third-party server's tool descriptions and outputs reach your model's context. Malicious descriptions or results are a prompt-injection channel. Install servers only from sources you trust and review what they expose.</li>
+  <li><strong>Audit</strong>: log every tool call with user, arguments (redacted) and result status.</li>
+</ul>
+
+<h2>Agent-to-agent protocols</h2>
+<p>MCP connects an agent to tools. A separate group of protocols, such as the Agent Communication Protocol and Agent2Agent, focus on agents talking to other agents: discovering each other, delegating tasks and exchanging results. They are younger and still settling, so design your own agents with clean, typed boundaries that can be exposed through whichever protocol your ecosystem standardises on.</p>
+
+<h2>Getting started</h2>
+<ol>
+  <li>Pick one read-only internal API that several teams would like assistants to use.</li>
+  <li>Wrap it as an MCP server using an official SDK, with clear tool descriptions and input schemas.</li>
+  <li>Forward the user's identity so the API enforces its normal permissions.</li>
+  <li>Test it from an MCP-capable desktop app, then from your own orchestrator.</li>
+</ol>

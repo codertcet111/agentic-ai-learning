@@ -1,0 +1,43 @@
+<!-- desc: Practical privacy and responsible AI for engineers: data minimisation, PII handling in prompts and logs, provider data terms, retention and deletion, transparency with users, and fairness checks. -->
+<p>AI features handle more personal data, in more places, than most web features. A single chat turn can touch the user's messages, their records from several systems, a model provider, a tracing tool and a cache. Responsible AI in practice is mostly careful engineering of those data flows, plus honesty with users about what the system does.</p>
+
+<h2>Map the data flow first</h2>
+<p>For each feature, draw where data goes: client, orchestrator, database, model provider, retrieval store, logs, traces, error tracker, analytics. For each hop, note what is sent, whether it includes personal data, and how long it is kept. Most privacy problems are discovered at this step, before any code is written.</p>
+
+<h2>Minimise</h2>
+<ul>
+  <li>Send the model only the fields it needs. A leave request needs dates, not the employee's address.</li>
+  <li>Prefer ids and pseudonyms in prompts when the model does not need real names.</li>
+  <li>Summarise tool results instead of passing whole records.</li>
+  <li>Do not store raw prompts and replies longer than you need them for support and quality.</li>
+</ul>
+
+<h2>Know your providers' terms</h2>
+<p>Check, for each model and tool provider: whether your data is used for training, how long it is retained, where it is processed, and which agreements (such as a data processing agreement) are in place. Choose regions and settings that match your obligations, and record the decision.</p>
+
+<h2>Protect observability data</h2>
+<p>Traces and logs are the easiest place to leak personal data. Mask before export, capture structure rather than content by default, and alert when masking misses something (see <a href="../langfuse-lab/masking-alerts-and-failures.html">masking and failures</a>).</p>
+
+<h2>Retention and deletion</h2>
+<p>When a user asks to delete their data, it must disappear from every store: messages, memories, vectors, caches, traces and backups, within the period your policy promises. Build the deletion job when you build the feature, and test it.</p>
+
+<h2>Be transparent</h2>
+<ul>
+  <li>Tell users they are talking to an AI system.</li>
+  <li>Show sources for factual answers.</li>
+  <li>Make it clear when the assistant is about to take an action, and let them confirm it.</li>
+  <li>Offer a path to a human for important decisions.</li>
+</ul>
+
+<h2>Check for unfair outcomes</h2>
+<p>If the system ranks, screens or recommends anything about people, such as candidates, claims or customers, evaluate outcomes across groups using your golden sets, and keep a human in the loop for consequential decisions. Many jurisdictions now regulate automated decision-making and AI systems in high-impact areas, so involve your legal and compliance teams early for those use cases.</p>
+
+<h2>A short checklist</h2>
+<ol>
+  <li>Data flow mapped and reviewed.</li>
+  <li>Only necessary fields reach the model.</li>
+  <li>Provider terms checked and recorded.</li>
+  <li>Traces and logs masked.</li>
+  <li>Retention set; deletion works end to end.</li>
+  <li>Users told what the AI does and can reach a human.</li>
+</ol>

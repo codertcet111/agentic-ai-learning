@@ -28,4 +28,4 @@ headers = {
 <p>The signing key exists in CI secrets and in non-production environments. Production either has no eval key at all, so eval headers are ignored, or a separate key that only enables tagging, never fixtures or stubs. Rotate keys on a schedule and whenever someone with access leaves.</p>
 
 <h2>Why not just an API key header?</h2>
-<p>A static "test mode" header is a shared secret that leaks easily: into logs, into browser developer tools, into screenshots. A signature over the timestamp and body is useless once it expires and cannot be reused for a different request. The extra code is small.</p>
+<p>A fixed "test mode" header is a shared secret that leaks easily: into logs, into browser developer tools, into screenshots. A signature over the timestamp and body is useless once it expires and cannot be reused for a different request. The extra code is small.</p>

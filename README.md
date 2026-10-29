@@ -1,4 +1,4 @@
-# Agentic Field Notes (static blog)
+# Agentic Field Notes
 
 A self-contained **HTML + CSS** blog about building agentic AI systems, published at https://codertcet111.github.io/agentic-ai-learning/. No build step is needed to serve it; `scripts/generate_pages.py` rebuilds the pages after you edit content.
 
@@ -20,6 +20,7 @@ A self-contained **HTML + CSS** blog about building agentic AI systems, publishe
 │       └── favicon.svg
 ├── about/                     # About Shubham: experience timeline and profile links
 ├── agentic-development/       # The 20-step path (steps/ holds each step)
+├── ai-engineer-essentials/    # LLM basics, embeddings, MCP, serving, guardrails, memory, LLMOps, privacy
 ├── graph-orchestration/  data-patterns/  rag-knowledge/  evaluation/
 ├── build-guides/  langfuse-lab/  llm-engineering/  prompts-tools/
 ├── security-ai/  testing-ai-dev/
@@ -42,7 +43,7 @@ Open `http://localhost:8080/`. On Windows you can use `py -m http.server 8080`.
 
 ## Publish free on GitHub Pages
 
-1. Create a new **public** repository on GitHub, for example `static-blog`.
+1. Create a new **public** repository on GitHub, for example `agentic-ai-learning`.
 2. Upload the **contents of this folder** so that `index.html` sits at the top level of the repository (not inside another folder). Either drag the files into GitHub's "Add file → Upload files" page, or use git:
 
    ```bash
@@ -71,6 +72,10 @@ To get the site into Google faster:
 4. Optionally do the same in [Bing Webmaster Tools](https://www.bing.com/webmasters), which can import the site straight from Search Console.
 
 New sites usually take a few days to a few weeks to appear in results.
+
+## Career timeline
+
+The "My journey" timeline on the home page comes from `JOURNEY` in `scripts/generate_pages.py`. Each row has a label, a colour key and one or more periods as `("YYYY-MM", "YYYY-MM")`, with `None` as the end date meaning "until now". The browser stretches the bars to the current month every time the page is opened, so it never needs rebuilding just because time has passed. Edit the list, then rebuild.
 
 ## Reading progress
 

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLMOps: shipping prompt and model changes | Agentic Field Notes</title>
+  <meta name="description" content="LLMOps for shipping AI features safely: versioning prompts and configs, evaluating before release, canary rollouts, monitoring quality and cost, and rolling back model or prompt changes.">
+  <meta name="author" content="Shubham Mishra">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/llmops-releases.html">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
+  <meta property="og:title" content="LLMOps: shipping prompt and model changes">
+  <meta property="og:description" content="LLMOps for shipping AI features safely: versioning prompts and configs, evaluating before release, canary rollouts, monitoring quality and cost, and rolling back model or prompt changes.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/llmops-releases.html">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "LLMOps: shipping prompt and model changes", "description": "LLMOps for shipping AI features safely: versioning prompts and configs, evaluating before release, canary rollouts, monitoring quality and cost, and rolling back model or prompt changes.", "url": "https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/llmops-releases.html", "image": "https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png", "author": {"@type": "Person", "name": "Shubham Mishra", "url": "https://codertcet111.github.io/agentic-ai-learning/about/", "jobTitle": "Engineering Manager and AI engineer", "sameAs": ["https://www.linkedin.com/in/shubham-mishra-7bb124193/", "https://www.blogger.com/profile/09898046087967419538", "https://github.com/codertcet111", "https://www.hackerearth.com/@shubham42", "https://www.researchgate.net/profile/Shubham_Mishra39"]}, "isPartOf": {"@type": "WebSite", "name": "Agentic Field Notes", "url": "https://codertcet111.github.io/agentic-ai-learning/"}}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../agentic-development/index.html">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../about/index.html">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../about/index.html">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../ai-engineer-essentials/index.html" aria-current="page"><span class="topic-name">AI Engineer Essentials</span><span class="topic-desc">LLM basics, embeddings, MCP, serving, guardrails, memory</span></a></li><li><a href="../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
+  <main id="main">
+<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><a href="index.html">AI Engineer Essentials</a><span class="sep">/</span><span aria-current="page">LLMOps: shipping prompt and model changes</span></nav>
+    <h1>LLMOps: shipping prompt and model changes</h1>
+    <p class="lead">LLMOps for shipping AI features safely: versioning prompts and configs, evaluating before release, canary rollouts, monitoring quality and cost, and rolling back model or prompt changes.</p>
+    <p class="meta"><a class="byline" href="../about/index.html"><img src="../assets/images/author/avatar.jpg" alt="" width="28" height="28">Shubham Mishra</a><span>2 min read</span><label class="done-toggle needs-js"><input type="checkbox" data-progress-id="2pzw"><span>Mark as complete</span></label></p>
+  </div>
+</header>
+<article class="prose">
+<p>In a normal web service, behaviour changes when code changes. In an AI system, behaviour also changes when a prompt is edited, a tool description is reworded, a retrieval index is rebuilt or the model provider ships a new version. LLMOps is the discipline of treating all of those as releases.</p>
+
+<h2>Version everything that changes behaviour</h2>
+<table>
+  <thead><tr><th>Artifact</th><th>How to version it</th></tr></thead>
+  <tbody>
+    <tr><td>Prompts and policies</td><td>In the repository, reviewed like code</td></tr>
+    <tr><td>Tool catalog</td><td>Hash of the merged catalog, pinned per session</td></tr>
+    <tr><td>Model choice</td><td>Aliases in configuration, mapped to exact model versions</td></tr>
+    <tr><td>Retrieval index</td><td>Index version and embedding model id on every chunk</td></tr>
+    <tr><td>Evaluation sets</td><td>In the repository, next to the code they test</td></tr>
+  </tbody>
+</table>
+<p>Tag every trace with these versions. When quality drops, you need to know which one moved.</p>
+
+<h2>Evaluate before you ship</h2>
+<ol>
+  <li>On every pull request: golden cases with a stub model, for plumbing (see <a href="../llm-engineering/llm-stub-ci.html">LLM stub in CI</a>).</li>
+  <li>For prompt, tool or model changes: the same cases against the real model, several runs each, compared with the last approved baseline (see <a href="../evaluation/trace-compare.html">trace compare</a>).</li>
+  <li>Release gate: all safety and write cases pass; no significant regression in tool accuracy, cost or latency.</li>
+</ol>
+
+<h2>Roll out gradually</h2>
+<ul>
+  <li><strong>Feature flags</strong> per tenant or user group for new capabilities.</li>
+  <li><strong>Canary releases</strong>: route a small share of traffic to the new prompt or model, compare scores and error rates, then widen.</li>
+  <li><strong>Shadow runs</strong> for risky changes: run the new version on real inputs without showing its output, and compare offline.</li>
+</ul>
+
+<h2>Monitor what users actually get</h2>
+<p>After release, watch:</p>
+<ul>
+  <li>Error and failure rates by capability.</li>
+  <li>LLM calls, tokens and cost per turn.</li>
+  <li>Latency at p50 and p95.</li>
+  <li>Automated check scores and user feedback (see <a href="../evaluation/langfuse-scores.html">Langfuse scores</a>).</li>
+</ul>
+
+<h2>Make rollback boring</h2>
+<p>Every behaviour change should be reversible in minutes: switch a model alias back, revert a prompt commit, pin the previous catalog hash, or turn off a flag. Practise it before you need it. Provider model updates deserve special care. Pin exact model versions where the provider allows it, and test new versions before switching the alias.</p>
+
+<h2>Write it down</h2>
+<p>Keep a short changelog of behaviour changes: what changed, why, which evaluation results supported it. Six months later, it is the only reliable answer to "when did the assistant start doing that?"</p>
+
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Canary release</dt><dd>Sending a small share of traffic to a new version before everyone.</dd><dt>Prompt versioning</dt><dd>Tracking prompt text like code, with history and rollbacks.</dd></dl>
+</section>
+<div class="finish-card needs-js"><label class="done-toggle needs-js"><input type="checkbox" data-progress-id="2pzw"><span>I have finished this article</span></label><div class="progress needs-js" data-progress-ids="sg8i suzi 3pbf ohtk 4uv5 usu8 yl7e 2pzw hb5d"><div class="progress-head"><strong>Your progress in AI Engineer Essentials</strong><span data-progress-text>0 of 9 complete</span></div><div class="progress-track" role="progressbar" aria-label="Your progress in AI Engineer Essentials" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0"><div class="progress-fill"></div></div></div></div>
+<nav class="post-nav" aria-label="More articles"><a class="prev" href="agent-memory.html"><small>Previous</small>Agent memory: short and long term</a><a class="next" href="privacy-responsible-ai.html"><small>Next</small>Privacy and responsible AI in practice</a></nav>
+</article>
+  </main>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Shubham Mishra</strong>Notes on building AI agents, written by Shubham Mishra.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../agentic-development/index.html">20-step path</a>
+      <a href="../about/index.html">About</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
+  <script src="../assets/js/site.js" defer></script>
+</body>
+</html>

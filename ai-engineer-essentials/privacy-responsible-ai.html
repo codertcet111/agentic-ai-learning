@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy and responsible AI in practice | Agentic Field Notes</title>
+  <meta name="description" content="Practical privacy and responsible AI for engineers: data minimisation, PII handling in prompts and logs, provider data terms, retention and deletion, transparency with users, and fairness checks.">
+  <meta name="author" content="Shubham Mishra">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/privacy-responsible-ai.html">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
+  <meta property="og:title" content="Privacy and responsible AI in practice">
+  <meta property="og:description" content="Practical privacy and responsible AI for engineers: data minimisation, PII handling in prompts and logs, provider data terms, retention and deletion, transparency with users, and fairness checks.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/privacy-responsible-ai.html">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Privacy and responsible AI in practice", "description": "Practical privacy and responsible AI for engineers: data minimisation, PII handling in prompts and logs, provider data terms, retention and deletion, transparency with users, and fairness checks.", "url": "https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/privacy-responsible-ai.html", "image": "https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png", "author": {"@type": "Person", "name": "Shubham Mishra", "url": "https://codertcet111.github.io/agentic-ai-learning/about/", "jobTitle": "Engineering Manager and AI engineer", "sameAs": ["https://www.linkedin.com/in/shubham-mishra-7bb124193/", "https://www.blogger.com/profile/09898046087967419538", "https://github.com/codertcet111", "https://www.hackerearth.com/@shubham42", "https://www.researchgate.net/profile/Shubham_Mishra39"]}, "isPartOf": {"@type": "WebSite", "name": "Agentic Field Notes", "url": "https://codertcet111.github.io/agentic-ai-learning/"}}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../agentic-development/index.html">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../about/index.html">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../about/index.html">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../ai-engineer-essentials/index.html" aria-current="page"><span class="topic-name">AI Engineer Essentials</span><span class="topic-desc">LLM basics, embeddings, MCP, serving, guardrails, memory</span></a></li><li><a href="../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
+  <main id="main">
+<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><a href="index.html">AI Engineer Essentials</a><span class="sep">/</span><span aria-current="page">Privacy and responsible AI in practice</span></nav>
+    <h1>Privacy and responsible AI in practice</h1>
+    <p class="lead">Practical privacy and responsible AI for engineers: data minimisation, PII handling in prompts and logs, provider data terms, retention and deletion, transparency with users, and fairness checks.</p>
+    <p class="meta"><a class="byline" href="../about/index.html"><img src="../assets/images/author/avatar.jpg" alt="" width="28" height="28">Shubham Mishra</a><span>2 min read</span><label class="done-toggle needs-js"><input type="checkbox" data-progress-id="hb5d"><span>Mark as complete</span></label></p>
+  </div>
+</header>
+<article class="prose">
+<p>AI features handle more personal data, in more places, than most web features. A single chat turn can touch the user's messages, their records from several systems, a model provider, a tracing tool and a cache. Responsible AI in practice is mostly careful engineering of those data flows, plus honesty with users about what the system does.</p>
+
+<h2>Map the data flow first</h2>
+<p>For each feature, draw where data goes: client, orchestrator, database, model provider, retrieval store, logs, traces, error tracker, analytics. For each hop, note what is sent, whether it includes personal data, and how long it is kept. Most privacy problems are discovered at this step, before any code is written.</p>
+
+<h2>Minimise</h2>
+<ul>
+  <li>Send the model only the fields it needs. A leave request needs dates, not the employee's address.</li>
+  <li>Prefer ids and pseudonyms in prompts when the model does not need real names.</li>
+  <li>Summarise tool results instead of passing whole records.</li>
+  <li>Do not store raw prompts and replies longer than you need them for support and quality.</li>
+</ul>
+
+<h2>Know your providers' terms</h2>
+<p>Check, for each model and tool provider: whether your data is used for training, how long it is retained, where it is processed, and which agreements (such as a data processing agreement) are in place. Choose regions and settings that match your obligations, and record the decision.</p>
+
+<h2>Protect observability data</h2>
+<p>Traces and logs are the easiest place to leak personal data. Mask before export, capture structure rather than content by default, and alert when masking misses something (see <a href="../langfuse-lab/masking-alerts-and-failures.html">masking and failures</a>).</p>
+
+<h2>Retention and deletion</h2>
+<p>When a user asks to delete their data, it must disappear from every store: messages, memories, vectors, caches, traces and backups, within the period your policy promises. Build the deletion job when you build the feature, and test it.</p>
+
+<h2>Be transparent</h2>
+<ul>
+  <li>Tell users they are talking to an AI system.</li>
+  <li>Show sources for factual answers.</li>
+  <li>Make it clear when the assistant is about to take an action, and let them confirm it.</li>
+  <li>Offer a path to a human for important decisions.</li>
+</ul>
+
+<h2>Check for unfair outcomes</h2>
+<p>If the system ranks, screens or recommends anything about people, such as candidates, claims or customers, evaluate outcomes across groups using your golden sets, and keep a human in the loop for consequential decisions. Many jurisdictions now regulate automated decision-making and AI systems in high-impact areas, so involve your legal and compliance teams early for those use cases.</p>
+
+<h2>A short checklist</h2>
+<ol>
+  <li>Data flow mapped and reviewed.</li>
+  <li>Only necessary fields reach the model.</li>
+  <li>Provider terms checked and recorded.</li>
+  <li>Traces and logs masked.</li>
+  <li>Retention set; deletion works end to end.</li>
+  <li>Users told what the AI does and can reach a human.</li>
+</ol>
+
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>PII</dt><dd>Personally identifiable information, such as names, emails and phone numbers.</dd><dt>Data minimisation</dt><dd>Collecting and keeping only the data a feature needs.</dd></dl>
+</section>
+<div class="finish-card needs-js"><label class="done-toggle needs-js"><input type="checkbox" data-progress-id="hb5d"><span>I have finished this article</span></label><div class="progress needs-js" data-progress-ids="sg8i suzi 3pbf ohtk 4uv5 usu8 yl7e 2pzw hb5d"><div class="progress-head"><strong>Your progress in AI Engineer Essentials</strong><span data-progress-text>0 of 9 complete</span></div><div class="progress-track" role="progressbar" aria-label="Your progress in AI Engineer Essentials" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0"><div class="progress-fill"></div></div></div></div>
+<nav class="post-nav" aria-label="More articles"><a class="prev" href="llmops-releases.html"><small>Previous</small>LLMOps: shipping prompt and model changes</a></nav>
+</article>
+  </main>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Shubham Mishra</strong>Notes on building AI agents, written by Shubham Mishra.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../agentic-development/index.html">20-step path</a>
+      <a href="../about/index.html">About</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
+  <script src="../assets/js/site.js" defer></script>
+</body>
+</html>

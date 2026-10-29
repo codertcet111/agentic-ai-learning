@@ -1,0 +1,40 @@
+<!-- desc: Embeddings and vector search for AI engineers: what an embedding captures, similarity metrics, approximate nearest-neighbour indexes, hybrid search, reranking and the mistakes that hurt retrieval quality. -->
+<p>Retrieval, semantic search, deduplication, clustering and recommendation all rest on the same building block: turning text into vectors and finding vectors that are close together. Understanding that block well saves weeks of tuning later.</p>
+
+<h2>What an embedding is</h2>
+<p>An embedding model maps a piece of text to a fixed-length list of numbers, often a few hundred to a few thousand dimensions. Texts with similar meaning land close together in that space, so "How do I reset my password?" and "I forgot my login" end up near each other even though they share almost no words.</p>
+<p>Embeddings capture meaning as the model learned it. They are strong on paraphrase and topic, and weaker on exact identifiers, numbers, negation and rare jargon. "Form HR-12" and "Form HR-21" can look almost identical to an embedding model.</p>
+
+<h2>Measuring closeness</h2>
+<ul>
+  <li><strong>Cosine similarity</strong> compares direction and ignores length. It is the most common choice.</li>
+  <li><strong>Dot product</strong> equals cosine similarity when vectors are normalised, and is faster.</li>
+  <li><strong>Euclidean distance</strong> is sometimes used by specific indexes.</li>
+</ul>
+<p>Use whatever metric the embedding model was trained for; its documentation says which.</p>
+
+<h2>Searching millions of vectors</h2>
+<p>Comparing a query against every stored vector is exact but slow at scale. Vector databases use <strong>approximate nearest-neighbour (ANN)</strong> indexes such as HNSW (a layered graph) or IVF (clustered lists) to find very close matches quickly, trading a little recall for large speed gains. Index parameters control that trade-off, so tune them against your own recall measurements rather than accepting defaults blindly.</p>
+<p>Options range from extensions in databases you may already run (pgvector for Postgres, vector search in MongoDB Atlas, OpenSearch) to dedicated vector databases. Keeping vectors next to your existing data simplifies filtering and access control (see <a href="../data-patterns/vector-metadata.html">vector metadata</a>).</p>
+
+<h2>Hybrid search and reranking</h2>
+<p>Two techniques fix most retrieval quality problems:</p>
+<ol>
+  <li><strong>Hybrid search</strong>: run keyword search (BM25) and vector search, then merge the lists, for example with reciprocal rank fusion. Keywords catch exact codes and names; vectors catch paraphrases.</li>
+  <li><strong>Reranking</strong>: take the top 20 to 50 candidates and score each against the query with a cross-encoder or reranking model, which reads query and passage together. It is slower per item but much more precise, and you only run it on a short list.</li>
+</ol>
+
+<h2>Common mistakes</h2>
+<table>
+  <thead><tr><th>Mistake</th><th>Consequence</th></tr></thead>
+  <tbody>
+    <tr><td>Mixing vectors from different embedding models</td><td>Similarity scores become meaningless</td></tr>
+    <tr><td>Embedding huge chunks</td><td>One vector averages many topics and matches nothing well</td></tr>
+    <tr><td>Filtering permissions after search</td><td>Leaks and empty results (see <a href="../rag-knowledge/safety.html">RAG safety</a>)</td></tr>
+    <tr><td>Using a fixed similarity threshold everywhere</td><td>Scores vary by model and domain; calibrate on your data</td></tr>
+    <tr><td>Never measuring recall</td><td>Quality problems get blamed on the prompt</td></tr>
+  </tbody>
+</table>
+
+<h2>Choosing an embedding model</h2>
+<p>Public leaderboards are a starting point, not an answer. Build a small labelled set of real queries and the documents that should match, then compare two or three models on recall@k (see <a href="../rag-knowledge/eval-retrieval.html">evaluating retrieval</a>). Check language coverage, maximum input length, vector size (storage cost) and whether you can run it where your data is allowed to go.</p>

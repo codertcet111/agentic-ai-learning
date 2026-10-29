@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inference: latency, throughput and cost | Agentic Field Notes</title>
+  <meta name="description" content="What AI engineers need to know about LLM inference: time to first token, throughput, batching, KV cache, quantization, streaming, caching and the trade-offs between hosted APIs and self-hosting.">
+  <meta name="author" content="Shubham Mishra">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/inference-latency-cost.html">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
+  <meta property="og:title" content="Inference: latency, throughput and cost">
+  <meta property="og:description" content="What AI engineers need to know about LLM inference: time to first token, throughput, batching, KV cache, quantization, streaming, caching and the trade-offs between hosted APIs and self-hosting.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/inference-latency-cost.html">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Inference: latency, throughput and cost", "description": "What AI engineers need to know about LLM inference: time to first token, throughput, batching, KV cache, quantization, streaming, caching and the trade-offs between hosted APIs and self-hosting.", "url": "https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/inference-latency-cost.html", "image": "https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png", "author": {"@type": "Person", "name": "Shubham Mishra", "url": "https://codertcet111.github.io/agentic-ai-learning/about/", "jobTitle": "Engineering Manager and AI engineer", "sameAs": ["https://www.linkedin.com/in/shubham-mishra-7bb124193/", "https://www.blogger.com/profile/09898046087967419538", "https://github.com/codertcet111", "https://www.hackerearth.com/@shubham42", "https://www.researchgate.net/profile/Shubham_Mishra39"]}, "isPartOf": {"@type": "WebSite", "name": "Agentic Field Notes", "url": "https://codertcet111.github.io/agentic-ai-learning/"}}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../agentic-development/index.html">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../about/index.html">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../about/index.html">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../ai-engineer-essentials/index.html" aria-current="page"><span class="topic-name">AI Engineer Essentials</span><span class="topic-desc">LLM basics, embeddings, MCP, serving, guardrails, memory</span></a></li><li><a href="../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
+  <main id="main">
+<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><a href="index.html">AI Engineer Essentials</a><span class="sep">/</span><span aria-current="page">Inference: latency, throughput and cost</span></nav>
+    <h1>Inference: latency, throughput and cost</h1>
+    <p class="lead">What AI engineers need to know about LLM inference: time to first token, throughput, batching, KV cache, quantization, streaming, caching and the trade-offs between hosted APIs and self-hosting.</p>
+    <p class="meta"><a class="byline" href="../about/index.html"><img src="../assets/images/author/avatar.jpg" alt="" width="28" height="28">Shubham Mishra</a><span>2 min read</span><label class="done-toggle needs-js"><input type="checkbox" data-progress-id="4uv5"><span>Mark as complete</span></label></p>
+  </div>
+</header>
+<article class="prose">
+<p>Users judge an assistant by how fast it feels, and finance judges it by what it costs. Both come down to inference: the work of running the model for each request. You do not need to write GPU kernels, but you should know the vocabulary and the levers.</p>
+
+<h2>Two latencies, not one</h2>
+<ul>
+  <li><strong>Time to first token (TTFT)</strong>: how long before anything appears. Driven by queueing, network and processing the input prompt. Long prompts raise it.</li>
+  <li><strong>Output speed</strong>: tokens per second once generation starts. Driven by model size and server load. Long replies take proportionally longer.</li>
+</ul>
+<p>Total time is roughly TTFT plus output tokens divided by speed. An agent turn often makes several calls in sequence, so these add up quickly.</p>
+
+<h2>What happens on the server</h2>
+<table>
+  <thead><tr><th>Technique</th><th>What it does</th><th>Why you care</th></tr></thead>
+  <tbody>
+    <tr><td>Batching</td><td>Processes many requests together on the same hardware</td><td>Higher throughput and lower cost per token; can add a little queueing delay</td></tr>
+    <tr><td>KV cache</td><td>Keeps attention state for tokens already processed</td><td>Makes generating each new token cheap; also enables prompt caching</td></tr>
+    <tr><td>Prompt caching</td><td>Reuses work for a repeated prompt prefix across requests</td><td>Cheaper, faster input when system prompt and tools stay identical</td></tr>
+    <tr><td>Quantization</td><td>Stores weights in fewer bits (for example 8 or 4)</td><td>Fits larger models on less hardware, faster, with some quality risk</td></tr>
+    <tr><td>Speculative decoding</td><td>A small model drafts tokens that the large model verifies</td><td>Faster output with the large model's quality</td></tr>
+  </tbody>
+</table>
+
+<h2>Levers you control</h2>
+<ol>
+  <li><strong>Fewer calls per turn.</strong> Recipes, better tool descriptions and summarised tool results cut replanning (see <a href="../build-guides/cost-controls.html">cost controls</a>).</li>
+  <li><strong>Smaller prompts.</strong> Filter tools, trim history, summarise retrieved text.</li>
+  <li><strong>Stable prefixes.</strong> Put unchanging content first so prompt caching applies.</li>
+  <li><strong>Right-sized models.</strong> Small models for routing and extraction, large ones for hard planning (see <a href="../llm-engineering/model-routing.html">model routing</a>).</li>
+  <li><strong>Streaming.</strong> Users perceive speed from the first words (see <a href="../llm-engineering/streaming-dev.html">streaming</a>).</li>
+  <li><strong>Parallel calls.</strong> Run independent tool calls and reads concurrently.</li>
+  <li><strong>Cap output.</strong> Set max tokens per purpose.</li>
+</ol>
+
+<h2>Hosted API or self-hosted?</h2>
+<table>
+  <thead><tr><th></th><th>Hosted API</th><th>Self-hosted open model</th></tr></thead>
+  <tbody>
+    <tr><td>Start-up effort</td><td>Minutes</td><td>Days to weeks</td></tr>
+    <tr><td>Cost at low volume</td><td>Low, pay per token</td><td>High, you pay for idle GPUs</td></tr>
+    <tr><td>Cost at steady high volume</td><td>Can become significant</td><td>Can be lower if utilisation is high</td></tr>
+    <tr><td>Data control</td><td>Depends on provider terms and region</td><td>Full</td></tr>
+    <tr><td>Model quality ceiling</td><td>Usually highest</td><td>Depends on available open models</td></tr>
+    <tr><td>Operations</td><td>Provider's problem</td><td>Yours: scaling, upgrades, monitoring</td></tr>
+  </tbody>
+</table>
+<p>Many teams start hosted, measure real usage for a few months, and only then consider self-hosting specific high-volume, narrow tasks.</p>
+
+<h2>Measure it</h2>
+<p>Record TTFT, total duration, input and output tokens and cost for every LLM call, tagged by purpose and model. Watch the p95, not just the average: one slow call in a five-call turn makes the whole turn slow.</p>
+
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>TTFT</dt><dd>Time to first token: how long before the reply starts appearing.</dd><dt>KV cache</dt><dd>Stored attention state that lets a model reuse work for earlier tokens.</dd><dt>Quantization</dt><dd>Storing model weights with fewer bits to save memory and speed up inference.</dd></dl>
+</section>
+<div class="finish-card needs-js"><label class="done-toggle needs-js"><input type="checkbox" data-progress-id="4uv5"><span>I have finished this article</span></label><div class="progress needs-js" data-progress-ids="sg8i suzi 3pbf ohtk 4uv5 usu8 yl7e 2pzw hb5d"><div class="progress-head"><strong>Your progress in AI Engineer Essentials</strong><span data-progress-text>0 of 9 complete</span></div><div class="progress-track" role="progressbar" aria-label="Your progress in AI Engineer Essentials" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0"><div class="progress-fill"></div></div></div></div>
+<nav class="post-nav" aria-label="More articles"><a class="prev" href="mcp-tool-interoperability.html"><small>Previous</small>MCP: connecting agents to tools</a><a class="next" href="guardrails-prompt-injection.html"><small>Next</small>Guardrails and prompt injection</a></nav>
+</article>
+  </main>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Shubham Mishra</strong>Notes on building AI agents, written by Shubham Mishra.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../agentic-development/index.html">20-step path</a>
+      <a href="../about/index.html">About</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
+  <script src="../assets/js/site.js" defer></script>
+</body>
+</html>

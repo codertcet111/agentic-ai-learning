@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP: connecting agents to tools | Agentic Field Notes</title>
+  <meta name="description" content="The Model Context Protocol (MCP) explained for AI engineers: hosts, clients and servers, tools, resources and prompts, transports, and how to expose your own APIs to agents safely.">
+  <meta name="author" content="Shubham Mishra">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/mcp-tool-interoperability.html">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
+  <meta property="og:title" content="MCP: connecting agents to tools">
+  <meta property="og:description" content="The Model Context Protocol (MCP) explained for AI engineers: hosts, clients and servers, tools, resources and prompts, transports, and how to expose your own APIs to agents safely.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/mcp-tool-interoperability.html">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "MCP: connecting agents to tools", "description": "The Model Context Protocol (MCP) explained for AI engineers: hosts, clients and servers, tools, resources and prompts, transports, and how to expose your own APIs to agents safely.", "url": "https://codertcet111.github.io/agentic-ai-learning/ai-engineer-essentials/mcp-tool-interoperability.html", "image": "https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png", "author": {"@type": "Person", "name": "Shubham Mishra", "url": "https://codertcet111.github.io/agentic-ai-learning/about/", "jobTitle": "Engineering Manager and AI engineer", "sameAs": ["https://www.linkedin.com/in/shubham-mishra-7bb124193/", "https://www.blogger.com/profile/09898046087967419538", "https://github.com/codertcet111", "https://www.hackerearth.com/@shubham42", "https://www.researchgate.net/profile/Shubham_Mishra39"]}, "isPartOf": {"@type": "WebSite", "name": "Agentic Field Notes", "url": "https://codertcet111.github.io/agentic-ai-learning/"}}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../agentic-development/index.html">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../about/index.html">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../about/index.html">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../ai-engineer-essentials/index.html" aria-current="page"><span class="topic-name">AI Engineer Essentials</span><span class="topic-desc">LLM basics, embeddings, MCP, serving, guardrails, memory</span></a></li><li><a href="../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
+  <main id="main">
+<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><a href="index.html">AI Engineer Essentials</a><span class="sep">/</span><span aria-current="page">MCP: connecting agents to tools</span></nav>
+    <h1>MCP: connecting agents to tools</h1>
+    <p class="lead">The Model Context Protocol (MCP) explained for AI engineers: hosts, clients and servers, tools, resources and prompts, transports, and how to expose your own APIs to agents safely.</p>
+    <p class="meta"><a class="byline" href="../about/index.html"><img src="../assets/images/author/avatar.jpg" alt="" width="28" height="28">Shubham Mishra</a><span>2 min read</span><label class="done-toggle needs-js"><input type="checkbox" data-progress-id="ohtk"><span>Mark as complete</span></label></p>
+  </div>
+</header>
+<article class="prose">
+<p>Every agent needs tools, and for a long time every framework described tools its own way. The <strong>Model Context Protocol (MCP)</strong> is an open standard, introduced by Anthropic in late 2024 and since adopted widely, for connecting AI applications to tools and data through one common interface. Write a tool integration once as an MCP server, and any MCP-capable application can use it.</p>
+
+<h2>The moving parts</h2>
+<ul>
+  <li><strong>Host</strong>: the AI application the user interacts with, such as a desktop assistant, an IDE or your own agent backend.</li>
+  <li><strong>Client</strong>: the connector inside the host that talks to one server.</li>
+  <li><strong>Server</strong>: a program that exposes capabilities, for example "search tickets" or "read this database".</li>
+</ul>
+
+<h2>What a server can offer</h2>
+<table>
+  <thead><tr><th>Primitive</th><th>What it is</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td>Tools</td><td>Functions the model can call, with a JSON Schema for inputs</td><td><code>create_ticket(title, priority)</code></td></tr>
+    <tr><td>Resources</td><td>Data the application can read and put in context</td><td>A file, a database row, a document</td></tr>
+    <tr><td>Prompts</td><td>Reusable prompt templates the user can pick</td><td>"Summarise this incident"</td></tr>
+  </tbody>
+</table>
+<p>Messages use JSON-RPC. Servers run either locally, talking to the host over standard input and output, or remotely over HTTP, usually with OAuth for authorisation.</p>
+
+<h2>How it relates to your agent backend</h2>
+<p>MCP describes the same idea as the <a href="../agentic-development/steps/09-capability-catalog.html">capability catalog</a> in the 20-step path: named tools, typed parameters and a clear owner. You can use it on either side:</p>
+<ul>
+  <li><strong>As a client</strong>: your orchestrator connects to existing MCP servers instead of writing a custom provider for each service.</li>
+  <li><strong>As a server</strong>: you wrap your domain APIs as an MCP server, so assistants and IDEs across your company can use them with the same permissions as your own agent.</li>
+</ul>
+
+<h2>Security still lives with you</h2>
+<p>A standard interface does not make a tool safe. Treat MCP servers like any other integration:</p>
+<ul>
+  <li><strong>Least privilege</strong>: expose only the tools a use case needs, scoped to the signed-in user.</li>
+  <li><strong>Confirm writes</strong>: tools that change data should require explicit confirmation (see <a href="../security-ai/write-confirmation.html">write confirmation</a>).</li>
+  <li><strong>Trust carefully</strong>: a third-party server's tool descriptions and outputs reach your model's context. Malicious descriptions or results are a prompt-injection channel. Install servers only from sources you trust and review what they expose.</li>
+  <li><strong>Audit</strong>: log every tool call with user, arguments (redacted) and result status.</li>
+</ul>
+
+<h2>Agent-to-agent protocols</h2>
+<p>MCP connects an agent to tools. A separate group of protocols, such as the Agent Communication Protocol and Agent2Agent, focus on agents talking to other agents: discovering each other, delegating tasks and exchanging results. They are younger and still settling, so design your own agents with clean, typed boundaries that can be exposed through whichever protocol your ecosystem standardises on.</p>
+
+<h2>Getting started</h2>
+<ol>
+  <li>Pick one read-only internal API that several teams would like assistants to use.</li>
+  <li>Wrap it as an MCP server using an official SDK, with clear tool descriptions and input schemas.</li>
+  <li>Forward the user's identity so the API enforces its normal permissions.</li>
+  <li>Test it from an MCP-capable desktop app, then from your own orchestrator.</li>
+</ol>
+
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>MCP</dt><dd>Model Context Protocol, an open standard for connecting AI applications to tools and data.</dd><dt>MCP server</dt><dd>A program that exposes tools, resources or prompts to MCP clients.</dd></dl>
+</section>
+<div class="finish-card needs-js"><label class="done-toggle needs-js"><input type="checkbox" data-progress-id="ohtk"><span>I have finished this article</span></label><div class="progress needs-js" data-progress-ids="sg8i suzi 3pbf ohtk 4uv5 usu8 yl7e 2pzw hb5d"><div class="progress-head"><strong>Your progress in AI Engineer Essentials</strong><span data-progress-text>0 of 9 complete</span></div><div class="progress-track" role="progressbar" aria-label="Your progress in AI Engineer Essentials" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0"><div class="progress-fill"></div></div></div></div>
+<nav class="post-nav" aria-label="More articles"><a class="prev" href="prompt-rag-or-finetune.html"><small>Previous</small>Prompting, RAG or fine-tuning?</a><a class="next" href="inference-latency-cost.html"><small>Next</small>Inference: latency, throughput and cost</a></nav>
+</article>
+  </main>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Shubham Mishra</strong>Notes on building AI agents, written by Shubham Mishra.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../agentic-development/index.html">20-step path</a>
+      <a href="../about/index.html">About</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
+  <script src="../assets/js/site.js" defer></script>
+</body>
+</html>

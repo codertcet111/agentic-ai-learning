@@ -1,0 +1,44 @@
+<!-- desc: Designing memory for AI agents: working memory in the context window, conversation summaries, long-term memory stores, retrieval of memories, user control and privacy. -->
+<p>Users expect assistants to remember: what they said five messages ago, their preferences, the project they mentioned last week. Models remember nothing between calls. Every form of memory is a design decision about what to store, when to retrieve it and how much to put back into the prompt.</p>
+
+<h2>Three layers of memory</h2>
+<table>
+  <thead><tr><th>Layer</th><th>Lives in</th><th>Lifetime</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td>Working memory</td><td>The context window</td><td>One call</td><td>The last few messages and this turn's tool results</td></tr>
+    <tr><td>Conversation memory</td><td>Your message store, plus a running summary</td><td>One conversation</td><td>"The user is booking leave for 6–7 November"</td></tr>
+    <tr><td>Long-term memory</td><td>A memory store with retrieval</td><td>Across conversations</td><td>"Prefers answers in Arabic", "Manages the payroll team"</td></tr>
+  </tbody>
+</table>
+
+<h2>Working and conversation memory</h2>
+<p>Keep recent messages verbatim within a token budget, and replace older ones with a short summary that is updated after each turn (see <a href="../llm-engineering/token-window-management.html">token window management</a>). Store structured state, such as the current form or chosen entity, in your own data model rather than hoping the model infers it from the transcript.</p>
+
+<h2>Long-term memory</h2>
+<p>Long-term memory turns conversations into facts worth keeping:</p>
+<ol>
+  <li><strong>Extract</strong>: after a conversation, a small model proposes candidate facts: preferences, roles, recurring goals.</li>
+  <li><strong>Filter</strong>: keep only facts that are stable, useful and appropriate to store. Discard one-off details and anything sensitive unless the user asked you to remember it.</li>
+  <li><strong>Store</strong>: save each fact with its source conversation, a timestamp and an embedding.</li>
+  <li><strong>Retrieve</strong>: at the start of a turn, fetch the few memories relevant to the current message and add them to the prompt.</li>
+  <li><strong>Update</strong>: when a new fact contradicts an old one, replace it rather than keeping both.</li>
+</ol>
+
+<h2>Memory should never be authority</h2>
+<p>A remembered "the user is a manager" must not grant manager permissions. Permissions always come from the domain system at request time. Memory personalises answers; it does not authorise actions.</p>
+
+<h2>Give users control</h2>
+<ul>
+  <li>Let users see what the assistant remembers about them.</li>
+  <li>Let them delete individual memories or turn memory off.</li>
+  <li>Tell them when a memory influenced an answer, where it matters.</li>
+  <li>Apply retention limits and honour deletion requests across every store, including vectors and caches.</li>
+</ul>
+<p>See <a href="privacy-responsible-ai.html">privacy and responsible AI</a> for the wider picture.</p>
+
+<h2>Common failure modes</h2>
+<ul>
+  <li><strong>Stale memories</strong> that override what the user just said. The current message always wins.</li>
+  <li><strong>Memory bloat</strong>: injecting dozens of memories into every prompt. Retrieve a handful.</li>
+  <li><strong>Cross-user leakage</strong>: a missing user filter on the memory store. Scope every query by user and tenant, and test it.</li>
+</ul>
