@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Observability stack choices | Agentic Field Notes</title>
+  <meta name="description" content="Choose an observability stack for AI applications: structured logs, distributed tracing and APM, LLM-specific observability like Langfuse, and error tracking, tied together by ids.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/evaluation/observability-stack.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/evaluation/observability-stack.html">
+  <meta property="og:title" content="Observability stack choices">
+  <meta property="og:description" content="Choose an observability stack for AI applications: structured logs, distributed tracing and APM, LLM-specific observability like Langfuse, and error tracking, tied together by ids.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Observability stack choices","description":"Choose an observability stack for AI applications: structured logs, distributed tracing and APM, LLM-specific observability like Langfuse, and error tracking, tied together by ids.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Eval &amp; Observability</a> / Observability stack choices</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Observability stack choices</h1>
+        <p class="lead" itemprop="description">Choose an observability stack for AI applications: structured logs, distributed tracing and APM, LLM-specific observability like Langfuse, and error tracking, tied together by ids.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="eval"></div>
+      <p>An agentic backend is a web service, a workflow engine and an LLM client at the same time. Each of those has mature observability tools, and no single tool covers all three well. A practical stack combines four pieces and links them with shared identifiers.</p>
+
+<h2>The four pieces</h2>
+<table>
+  <thead><tr><th>Piece</th><th>Answers</th><th>Examples</th></tr></thead>
+  <tbody>
+    <tr><td>Structured logs</td><td>What happened, in order, for this request?</td><td>JSON logs to Loki, Elasticsearch, CloudWatch, Datadog Logs</td></tr>
+    <tr><td>Distributed tracing / APM</td><td>Where did the time go across services?</td><td>OpenTelemetry with Jaeger, Tempo, Datadog APM, Honeycomb</td></tr>
+    <tr><td>LLM observability</td><td>What did the model see and say, and what did it cost?</td><td>Langfuse, Arize Phoenix, LangSmith and similar</td></tr>
+    <tr><td>Error tracking</td><td>Which exceptions are new and how often do they occur?</td><td>Sentry, Rollbar</td></tr>
+  </tbody>
+</table>
+
+<h2>Tie them together with ids</h2>
+<p>Every log line, span and error event carries <code>request_id</code>. LLM traces also carry <code>conversation_id</code> and <code>turn_id</code>. With that, an engineer can start anywhere, whether an alert, a user report or an error, and reach the others in one search. Without it, you have four tools and no story.</p>
+
+<h2>Structured logs</h2>
+<p>Log JSON with consistent keys: <code>ts</code>, <code>level</code>, <code>event</code>, <code>request_id</code>, <code>tenant</code> (pseudonymized), <code>turn_id</code>, <code>node</code>, <code>duration_ms</code>. Use event names, not sentences: <code>event="capability_invoked"</code> with fields is searchable, while "Invoked capability leave.balance.read in 230ms" is not.</p>
+
+<h2>Tracing and APM</h2>
+<p>OpenTelemetry instrumentation for your web framework, HTTP client and database driver gives request-level spans almost for free. Add the agent spans described in <a href="../agentic-development/steps/18-observability-tracing.html">step 18</a>. APM answers questions like "is the HR API slow for everyone, or only for this endpoint?"</p>
+
+<h2>LLM observability</h2>
+<p>LLM-focused tools understand prompts, completions, token usage, cost and evaluation scores, and present them in a way general APM does not. Many now accept OpenTelemetry data, so you can send the same spans to both. See the <a href="../langfuse-lab/index.html">Langfuse Lab</a> section for a walkthrough of one such tool.</p>
+
+<h2>Error tracking</h2>
+<p>Uncaught exceptions go to an error tracker with release tags, so you can see which deploy introduced a new error. Configure scrubbing before anything else: request headers, cookies and local variables can contain tokens and personal data.</p>
+
+<h2>Privacy across all four</h2>
+<p>Each tool is another copy of your data. Decide once what may be sent (identifiers pseudonymized, no tokens, prompt text only in approved environments or masked modes) and enforce it in shared logging and exporter code, not by convention.</p>
+
+<h2>Start small</h2>
+<p>If you are building the first version, start with structured logs plus one LLM observability tool, linked by request id. Add APM when you have several services, and error tracking once you have real users. The ids matter more than the tools.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="trace-compare.html">← Trace compare across releases</a><a href="langfuse-scores.html">Langfuse scores from CI →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>APM</dt><dd>Application performance monitoring with distributed tracing.</dd><dt>LLM observability</dt><dd>Products specialized in prompt/response logging.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

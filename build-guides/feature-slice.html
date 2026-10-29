@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ship one copilot feature | Agentic Field Notes</title>
+  <meta name="description" content="A practical recipe for shipping your first AI copilot feature: one read-only capability, one agent card, stubbed CI, golden cases, a feature flag and a measured rollout.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/build-guides/feature-slice.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/build-guides/feature-slice.html">
+  <meta property="og:title" content="Ship one copilot feature">
+  <meta property="og:description" content="A practical recipe for shipping your first AI copilot feature: one read-only capability, one agent card, stubbed CI, golden cases, a feature flag and a measured rollout.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Ship one copilot feature","description":"A practical recipe for shipping your first AI copilot feature: one read-only capability, one agent card, stubbed CI, golden cases, a feature flag and a measured rollout.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Build Guides</a> / Ship one copilot feature</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Ship one copilot feature</h1>
+        <p class="lead" itemprop="description">A practical recipe for shipping your first AI copilot feature: one read-only capability, one agent card, stubbed CI, golden cases, a feature flag and a measured rollout.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="default"></div>
+      <p>The fastest way to fail with an AI assistant is to try to launch it with forty capabilities at once. The fastest way to succeed is to ship one narrow, useful feature end to end, then widen it. This guide is that first slice.</p>
+
+<h2>Pick the slice</h2>
+<p>Good first features share three traits:</p>
+<ul>
+  <li><strong>Read-only.</strong> Nothing can be broken by a wrong answer beyond a wrong answer.</li>
+  <li><strong>Frequently asked.</strong> "How many leave days do I have?", "Where is my order?", "When is my next payslip?"</li>
+  <li><strong>Backed by an existing API.</strong> You should not need a new endpoint.</li>
+</ul>
+
+<h2>The checklist</h2>
+<ol>
+  <li><strong>Boundary note.</strong> One paragraph: which API, what auth, what the assistant must never do (<a href="../agentic-development/steps/01-orchestration-plane.html">step 1</a>).</li>
+  <li><strong>Capability card.</strong> Id, one-line summary that says when to use it and when not to, parameter schema, <code>side_effect: read</code>.</li>
+  <li><strong>Agent card.</strong> A narrow persona with only this capability plus a fallback "I can't help with that yet" policy.</li>
+  <li><strong>Provider.</strong> Timeouts, typed errors, a span per call.</li>
+  <li><strong>Compose template.</strong> A presentation mode if a table or card fits, and fallback text in every supported language.</li>
+  <li><strong>Golden cases.</strong> Ten to twenty: common phrasings, each language, missing data, upstream error, an out-of-scope question.</li>
+  <li><strong>Stub LLM in CI.</strong> The whole flow runs without API keys on every pull request.</li>
+  <li><strong>Feature flag.</strong> On for the team, then a pilot group, then everyone.</li>
+</ol>
+
+<h2>Handle "not yet" gracefully</h2>
+<p>Users will immediately ask for things the slice does not do. The agent's policy should recognise out-of-scope requests and say plainly what it can do today, ideally with a quick-reply chip for the supported action. A clear "I can't book leave yet, but I can show your balance" builds more trust than an attempt at something unsupported.</p>
+
+<h2>Measure the pilot</h2>
+<ul>
+  <li><strong>Usage</strong>: turns per day and share that hit the capability.</li>
+  <li><strong>Out-of-scope rate</strong>: what users asked for that you do not support. This is your roadmap.</li>
+  <li><strong>Quality</strong>: thumbs up and down, and a weekly review of 20 random traces.</li>
+  <li><strong>Cost and latency</strong>: tokens and p95 duration per turn.</li>
+</ul>
+
+<h2>Then widen</h2>
+<p>Add the next most-requested read capability, then the first write behind a confirmation (<a href="write-path.html">add a confirmed write</a>). Each addition reuses everything the first slice built: admission, tracing, evals, flags. That reuse is what makes the second feature take days instead of weeks.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="write-path.html">Add a confirmed write →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Feature flag</dt><dd>Runtime toggle isolating new behavior.</dd><dt>Read-only capability</dt><dd>Tool that does not mutate domain data.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

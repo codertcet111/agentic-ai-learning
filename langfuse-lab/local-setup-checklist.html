@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Langfuse setup checklist | Agentic Field Notes</title>
+  <meta name="description" content="A checklist for setting up Langfuse tracing locally for an agent backend: environment variables, region, capture mode, first trace, and common reasons traces do not appear.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/local-setup-checklist.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/local-setup-checklist.html">
+  <meta property="og:title" content="Local Langfuse setup checklist">
+  <meta property="og:description" content="A checklist for setting up Langfuse tracing locally for an agent backend: environment variables, region, capture mode, first trace, and common reasons traces do not appear.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Local Langfuse setup checklist","description":"A checklist for setting up Langfuse tracing locally for an agent backend: environment variables, region, capture mode, first trace, and common reasons traces do not appear.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Langfuse Lab</a> / Local Langfuse setup checklist</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Local Langfuse setup checklist</h1>
+        <p class="lead" itemprop="description">A checklist for setting up Langfuse tracing locally for an agent backend: environment variables, region, capture mode, first trace, and common reasons traces do not appear.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="eval"></div>
+      <p>Getting the first trace to appear is usually five minutes of configuration and, occasionally, an hour of wondering why nothing shows up. This checklist covers both.</p>
+
+<h2>1. Choose where Langfuse runs</h2>
+<ul>
+  <li><strong>Langfuse Cloud</strong>: create a project and copy its public and secret keys. Note which region your project is in, because the base URL differs per region.</li>
+  <li><strong>Self-hosted</strong>: Langfuse publishes a Docker Compose setup for local use. Point the base URL at your local instance.</li>
+</ul>
+
+<h2>2. Environment variables</h2>
+<pre><code># Example: prefix them per your settings class
+AGENTIC_LANGFUSE_ENABLED=true
+AGENTIC_LANGFUSE_PUBLIC_KEY=pk-lf-...
+AGENTIC_LANGFUSE_SECRET_KEY=sk-lf-...
+AGENTIC_LANGFUSE_BASE_URL=https://cloud.langfuse.com     # or your region / local URL
+AGENTIC_LANGFUSE_ENVIRONMENT=development
+AGENTIC_LANGFUSE_CAPTURE=structure
+AGENTIC_LANGFUSE_PSEUDONYM_KEY=&lt;random secret&gt;</code></pre>
+<p>Use one base URL consistently. If other libraries in the same process (for example an LLM gateway with its own Langfuse integration) read unprefixed <code>LANGFUSE_*</code> variables, make sure both point at the same project and region, or disable one integration. Otherwise you will get duplicate or missing traces.</p>
+
+<h2>3. Send one message</h2>
+<ol>
+  <li>Start the API with tracing enabled.</li>
+  <li>Send one chat message, for example with the local <code>make chat</code> CLI.</li>
+  <li>Open Tracing in Langfuse. A new trace should appear within a few seconds.</li>
+</ol>
+
+<h2>4. If nothing appears</h2>
+<ul>
+  <li>Check startup logs for a clear disabled reason (missing keys, tracing turned off, wrong environment). Your startup code should log one.</li>
+  <li>Check keys and base URL belong to the same project and region.</li>
+  <li>Short-lived scripts must <strong>flush</strong> before exiting. SDKs batch events in the background, and a CLI that exits immediately can lose them.</li>
+  <li>Check outbound network access from the container or VM to the Langfuse host.</li>
+  <li>Check the environment filter in the Langfuse UI matches the environment you set.</li>
+</ul>
+
+<h2>5. Then verify the shape</h2>
+<p>Open the trace and confirm: the root observation is named as you expect, generations show model and token counts, tool spans show capability ids, and no tokens, emails or other sensitive values appear anywhere. Turn that last check into a test with the in-memory exporter (see <a href="../testing-ai-dev/testing-observability.html">testing observability hooks</a>).</p>
+<nav class="post-nav" aria-label="More in this section"><a href="masking-alerts-and-failures.html">← Masking residuals, failures, and Rollbar alerts</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Pseudonym key</dt><dd>Secret used to HMAC user/tenant placeholders in masked capture.</dd><dt>Disabled reason</dt><dd>Human-readable cause when tracing did not start.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!-- desc: Structure multi-agent systems with a registry of agent cards, capability subsets per agent, a router that hands off ownership and one shared turn pipeline. -->
+<p>A single agent with every tool works for a demo with ten capabilities. At sixty capabilities across HR, finance and IT, tool selection gets worse, prompts get long, and one team's prompt change breaks another team's flow. Splitting into several agents fixes this, as long as they share infrastructure instead of each becoming its own system.</p>
+
+<h2>Agent cards</h2>
+<p>Each agent is defined by data, not by a new graph:</p>
+<pre><code>{
+  "id": "hr_assistant",
+  "name": {"en": "HR Assistant", "ar": "مساعد الموارد البشرية"},
+  "scope": "Leave, attendance, payslips and HR policies for the current employee.",
+  "capabilities": ["leave.*", "attendance.read", "payslip.read", "knowledge.search:hr_policies"],
+  "policy_module": "policies/hr.md",
+  "voice": "friendly, concise, never speculative about pay",
+  "handoff_to": ["it_helpdesk", "finance_assistant"]
+}</code></pre>
+<p>Store cards in a JSON registry that is versioned with the code and loaded at startup. Validate on boot that every capability pattern matches something in the catalog.</p>
+
+<h2>One pipeline, many cards</h2>
+<p>All agents run through the same graph (load, plan, resolve, invoke, compose). What differs is the input to the planner: the capability subset, the policy text and the voice. This means fixes to turn admission, tracing or confirmation flows apply to every agent at once.</p>
+
+<h2>Routing between agents</h2>
+<p>The router picks the owning agent for a turn:</p>
+<ol>
+  <li>If the conversation has an active agent and the message fits its scope, keep it.</li>
+  <li>Otherwise classify the message against agent scopes, using a small, cheap model call with a typed output: <code>{"agent_id": "...", "confidence": 0.0-1.0}</code>.</li>
+  <li>Below a confidence threshold, ask the user: "Is this about HR or IT?"</li>
+</ol>
+<p>Record the active agent on the conversation so follow-up messages like "and next week?" stay with the same agent.</p>
+
+<h2>Handoffs</h2>
+<p>Sometimes an agent realises mid-turn that the request belongs elsewhere: the HR assistant is asked to reset a laptop password. It returns a plan of kind <code>handoff</code> with the target agent and a one-line summary. The graph sets <code>next_agent_step</code>, swaps the card and replans with the new agent's tools, all within the same turn and the same trace. The user sees one reply, not "please ask the other bot".</p>
+<div class="callout">Limit handoffs to one or two per turn. Two agents passing a request back and forth is a loop with extra steps.</div>
+
+<h2>Supervisor or router?</h2>
+<p>Some frameworks favour a supervisor agent that calls worker agents as tools and combines their answers. That suits research-style tasks where several specialists contribute. For transactional assistants, where one domain owns each request, a router plus handoff is simpler, cheaper and easier to trace. Start with the router, and add a supervisor only when real tasks need several agents to collaborate on one answer.</p>
+
+<h2>Evaluating per agent</h2>
+<p>Tag golden cases with the expected agent. Track routing accuracy as its own metric. When a new agent is added, the routing cases for existing agents are the ones most likely to regress.</p>

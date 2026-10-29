@@ -1,0 +1,52 @@
+<!-- desc: Persist sanitized failure records for agent turns in MongoDB with stable error classes, correlation ids and safe context, so support can resolve issues without raw logs. -->
+<p>When a turn fails, three audiences need to know: engineers (stack traces, in your error tracker), the user (a short, honest message) and support (what happened, in terms they can act on). Failure records serve the third audience, and they are often the missing piece.</p>
+
+<h2>The record</h2>
+<pre><code>{
+  "_id": "fr_…",
+  "tenant_id": "acme",
+  "conversation_id": "cnv_19b2",
+  "turn_id": "trn_88",
+  "request_id": "req_5f1…",
+  "trace_id": "…",
+  "error_class": "upstream_unavailable",
+  "stage": "invoke_capability",
+  "capability_id": "leave.request.create",
+  "upstream_status": 503,
+  "retryable": true,
+  "user_message_key": "errors.service_busy",
+  "detail": "HR API circuit open after 5 consecutive failures",
+  "created_at": ISODate("…")
+}</code></pre>
+
+<h2>Stable error classes</h2>
+<p>The <code>error_class</code> field is the heart of the record. Keep the list short and documented:</p>
+<table>
+  <thead><tr><th>Class</th><th>Meaning</th><th>Support action</th></tr></thead>
+  <tbody>
+    <tr><td><code>auth_expired</code></td><td>User token rejected</td><td>Ask user to sign in again</td></tr>
+    <tr><td><code>forbidden</code></td><td>User lacks permission upstream</td><td>Check role assignment</td></tr>
+    <tr><td><code>invalid_arguments</code></td><td>Upstream rejected input</td><td>Check upstream validation message</td></tr>
+    <tr><td><code>upstream_unavailable</code></td><td>Timeout, 5xx or open circuit</td><td>Check status page of that service</td></tr>
+    <tr><td><code>llm_invalid_output</code></td><td>Schema validation failed after repair</td><td>Escalate to AI team with trace id</td></tr>
+    <tr><td><code>turn_timeout</code></td><td>Turn exceeded time budget</td><td>Escalate with trace id</td></tr>
+    <tr><td><code>internal</code></td><td>Unexpected exception</td><td>Escalate with request id</td></tr>
+  </tbody>
+</table>
+<p>Each class maps to a runbook entry. When a new kind of failure appears often enough to deserve its own action, add a class. Do not let free-text messages become the classification.</p>
+
+<h2>Sanitize before writing</h2>
+<p>Failure records are read by more people than logs are, so they must be cleaner:</p>
+<ul>
+  <li>No request or response bodies from upstream. They may contain personal data.</li>
+  <li>No tokens or headers, and no raw exception messages from libraries that echo URLs with query strings.</li>
+  <li><code>detail</code> is a sentence written by your code, not <code>str(exception)</code>.</li>
+</ul>
+
+<h2>Indexes and retention</h2>
+<pre><code>{ conversation_id: 1, created_at: -1 }
+{ tenant_id: 1, error_class: 1, created_at: -1 }
+{ created_at: 1 }  TTL 30 days</code></pre>
+
+<h2>Using them</h2>
+<p>A small admin page that lists failures by conversation, with links to the trace and the transcript, saves engineers hours each week. Weekly counts by <code>error_class</code> and <code>capability_id</code> show which upstream integration needs attention, which is often more useful than any LLM metric.</p>

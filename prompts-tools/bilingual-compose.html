@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bilingual compose for developers | Agentic Field Notes</title>
+  <meta name="description" content="Compose assistant replies in two languages such as English and Arabic: schema fields for each locale, consistent terminology, right-to-left rendering and locale-aware testing.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/prompts-tools/bilingual-compose.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/prompts-tools/bilingual-compose.html">
+  <meta property="og:title" content="Bilingual compose for developers">
+  <meta property="og:description" content="Compose assistant replies in two languages such as English and Arabic: schema fields for each locale, consistent terminology, right-to-left rendering and locale-aware testing.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Bilingual compose for developers","description":"Compose assistant replies in two languages such as English and Arabic: schema fields for each locale, consistent terminology, right-to-left rendering and locale-aware testing.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Prompts &amp; Tools</a> / Bilingual compose for developers</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Bilingual compose for developers</h1>
+        <p class="lead" itemprop="description">Compose assistant replies in two languages such as English and Arabic: schema fields for each locale, consistent terminology, right-to-left rendering and locale-aware testing.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>Many products serve users in more than one language, and the assistant must reply in the user's language with the same accuracy in each. This article uses English and Arabic as the example pair, but the same approach applies to any combination.</p>
+
+<h2>Generate every language in one call</h2>
+<pre><code>class ComposePayload(BaseModel):
+    text_en: str = Field(description="Reply in English.")
+    text_ar: str = Field(description="The same reply in Modern Standard Arabic.")
+    follow_ups: list[FollowUp] = []</code></pre>
+<p>Requiring both fields in one schema keeps them aligned: the same facts, numbers and dates. A separate translation call adds latency and can drift. The client shows the user's locale and keeps the other as fallback, for example when the user switches language mid-conversation.</p>
+
+<h2>Respond in the user's language</h2>
+<p>Determine the locale from the request header or user profile, not from guessing the language of each message. Users often mix languages, typing an English product name in an Arabic sentence. Pass the locale into compose and mark it on each stored message.</p>
+
+<h2>Keep facts language-neutral</h2>
+<ul>
+  <li>Pass numbers, dates and ids to compose as structured data, and format them per locale in code (digits, date formats, calendars) rather than asking the model to convert them.</li>
+  <li>Keep a glossary for domain terms such as leave types, statuses and product names, and include the relevant entries in the compose prompt so the same term is always used.</li>
+  <li>Never let the model translate proper nouns, codes or ids.</li>
+</ul>
+
+<h2>Right-to-left rendering</h2>
+<p>Arabic text needs <code>dir="rtl"</code> on its container. Mixed content (Arabic text containing English words or numbers) relies on the Unicode bidirectional algorithm, which usually works but can misplace punctuation at the edges of embedded English. Wrapping embedded left-to-right runs in <code>&lt;bdi&gt;</code> or using the <code>dir="auto"</code> attribute helps. Tables and cards should mirror column order. This is client work, but the server must mark locale and direction on every message.</p>
+
+<h2>Recipes and aliases</h2>
+<p>Known commands need aliases in every language (<a href="../agentic-development/steps/15-routing-recipes.html">step 15</a>), with normalization for each script, such as removing Arabic diacritics and unifying letter variants before matching.</p>
+
+<h2>Test in every language</h2>
+<p>Golden cases for each capability should exist in every supported language, with the locale header set. Check key facts in both text fields (the number 12 appears in both), and have a fluent speaker review a sample of real outputs regularly. Automated checks do not catch awkward phrasing.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="lookup-not-guess.html">← Lookups: enrich, don&#x27;t auto-select</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Compose</dt><dd>LLM step that produces user-visible natural language.</dd><dt>Locale header</dt><dd>HTTP header selecting response language.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

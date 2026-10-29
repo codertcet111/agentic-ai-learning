@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 9 — Merge and pin the capability catalog | Agentic Field Notes</title>
+  <meta name="description" content="Merge capability catalogs from upstream services, normalize their schemas, hash the result and pin that version per session so tools never change shape mid-conversation.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/09-capability-catalog.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/09-capability-catalog.html">
+  <meta property="og:title" content="Step 9 — Merge and pin the capability catalog">
+  <meta property="og:description" content="Merge capability catalogs from upstream services, normalize their schemas, hash the result and pin that version per session so tools never change shape mid-conversation.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 9 — Merge and pin the capability catalog","description":"Merge capability catalogs from upstream services, normalize their schemas, hash the result and pin that version per session so tools never change shape mid-conversation.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 9</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 9 — Merge and pin the capability catalog</h1>
+        <p class="lead" itemprop="description">Merge capability catalogs from upstream services, normalize their schemas, hash the result and pin that version per session so tools never change shape mid-conversation.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>The planner can only choose tools it has been told about. The <strong>capability catalog</strong> is that list: every tool with its id, description, parameter schema, owning provider and risk class. Getting it right is half of tool-calling quality. Keeping it consistent is the other half.</p>
+
+<h2>One capability entry</h2>
+<pre><code>{
+  "id": "leave.request.create",
+  "summary": "Create a leave request for the current employee.",
+  "provider": "hr-api",
+  "method": "POST",
+  "path": "/v2/leave/requests",
+  "side_effect": "write",              // read | write | destructive
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "required": ["leave_type", "start_date", "end_date"],
+    "properties": {
+      "leave_type": {"type": "string", "enum": ["annual", "sick", "unpaid"]},
+      "start_date": {"type": "string", "format": "date"},
+      "end_date":   {"type": "string", "format": "date"}
+    }
+  },
+  "permissions": ["leave.request.create"]
+}</code></pre>
+
+<h2>Where catalogs come from</h2>
+<p>The best catalogs are published by the services that own the capabilities, as a JSON document at a well-known endpoint or as part of an OpenAPI spec with extension fields. The orchestrator does not hand-write tool definitions for APIs it does not own. When the HR team adds a field, their published catalog changes and the orchestrator picks it up.</p>
+
+<h2>Merge, normalize, hash</h2>
+<ol>
+  <li><strong>Fetch</strong> each upstream catalog.</li>
+  <li><strong>Normalize</strong> into internal typed models: consistent id format, JSON Schema draft, defaults filled in, unknown fields dropped.</li>
+  <li><strong>Validate</strong>: ids unique across providers, schemas compile, every write capability declares <code>requires_confirmation</code>.</li>
+  <li><strong>Hash</strong> the canonical JSON (sorted keys) with SHA-256. That hash is the catalog version.</li>
+  <li><strong>Store</strong> the merged catalog in <code>catalog_versions</code> keyed by hash, and cache it in Redis.</li>
+</ol>
+
+<h2>Pin per session</h2>
+<p>When a session is created it records the current catalog hash. Every turn in that session plans against that exact version. Without pinning, a deploy that renames a parameter in the middle of a conversation can leave a paused form pointing at a schema that no longer exists. With pinning, old sessions finish on the old version and new sessions get the new one.</p>
+<div class="callout">Put the catalog hash in every trace. When support asks "why did the bot not offer X?", the first answer is often "that session was pinned to a catalog from before X shipped."</div>
+
+<h2>Refreshing</h2>
+<p>Refresh on a schedule (every few minutes) or on a webhook from upstream deploys. If a fetch fails, keep serving the last good version and raise an alert. Never publish a partially merged catalog because one provider timed out.</p>
+
+<h2>Per-user filtering</h2>
+<p>The merged catalog is the superset. Before planning, filter it down to what this principal may use (the session's <code>capabilities</code> list) and what this agent persona should see. A payroll assistant does not need inventory tools in its prompt, even if the user is allowed to use them elsewhere. Smaller tool lists improve tool selection accuracy and reduce input tokens.</p>
+
+<h2>Coverage reports</h2>
+<p>Run a small report in CI that lists capabilities in the catalog that no agent exposes, and agent references to capabilities that no longer exist. The first means features that users cannot reach. The second means runtime errors waiting to happen.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Log catalog hash on each turn in traces; support can see if a user pinned an old tool list.</div><p class="meta"><a href="08-pending-interactions.html">← Previous</a> · <a href="10-providers-invoke.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Catalog hash</dt><dd>Fingerprint of merged tool definitions used for routing consistency.</dd><dt>Normalizer</dt><dd>Code that converts upstream JSON into typed internal models.</dd><dt>Coverage report</dt><dd>Diff between catalog tools and agent registrations.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

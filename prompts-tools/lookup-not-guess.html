@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lookups: enrich, don&#x27;t auto-select | Agentic Field Notes</title>
+  <meta name="description" content="Teach AI agents to look up entity ids instead of guessing: lookup tools, a lookup trace in state, replanning with candidates and asking the user when results are ambiguous.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/prompts-tools/lookup-not-guess.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/prompts-tools/lookup-not-guess.html">
+  <meta property="og:title" content="Lookups: enrich, don&#x27;t auto-select">
+  <meta property="og:description" content="Teach AI agents to look up entity ids instead of guessing: lookup tools, a lookup trace in state, replanning with candidates and asking the user when results are ambiguous.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Lookups: enrich, don&#x27;t auto-select","description":"Teach AI agents to look up entity ids instead of guessing: lookup tools, a lookup trace in state, replanning with candidates and asking the user when results are ambiguous.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Prompts &amp; Tools</a> / Lookups: enrich, don&#x27;t auto-select</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Lookups: enrich, don&#x27;t auto-select</h1>
+        <p class="lead" itemprop="description">Teach AI agents to look up entity ids instead of guessing: lookup tools, a lookup trace in state, replanning with candidates and asking the user when results are ambiguous.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>Language models are very good at producing plausible identifiers. <code>emp_1042</code> looks like a real employee id whether or not it is one. Any agent that lets the model write ids directly will eventually act on an invented or wrong one. The fix is a firm habit: <strong>look up, don't guess</strong>.</p>
+
+<h2>The pattern</h2>
+<ol>
+  <li>A capability needs an entity id (employee, order, project).</li>
+  <li>The planner calls a lookup capability with what the user said: a name, a description, a partial number.</li>
+  <li>The full lookup result is appended to <code>lookup_trace</code> in state.</li>
+  <li>The planner runs again with the candidates in view, and either picks the clear match or asks the user to choose.</li>
+  <li>Validation checks that the chosen id appears in <code>lookup_trace</code> or an earlier tool result.</li>
+</ol>
+
+<h2>Policy wording</h2>
+<pre><code>When a tool parameter is an id for a person, order or other record:
+- Never write an id that you have not seen in a tool result in this turn.
+- Call the matching search tool with the user's description.
+- If exactly one result clearly matches, use its id.
+- If several results could match, return need_input listing them.
+- If none match, tell the user and ask for more detail.</code></pre>
+
+<h2>Enforce it in code too</h2>
+<p>The policy makes the right behaviour likely. Validation makes the wrong behaviour impossible:</p>
+<pre><code>@field_validator("arguments")
+def ids_must_be_seen(cls, args, info):
+    seen = info.context["seen_ids"]          # from lookup_trace and step results
+    for name, value in args.items():
+        if name.endswith("_id") and value not in seen:
+            raise ValueError(f"{name}={value} was not returned by any lookup")
+    return args</code></pre>
+<p>A rejected id triggers the repair path, and the repair prompt explains which ids are valid.</p>
+
+<h2>Don't shortcut in the resolver</h2>
+<p>A common shortcut is to write resolver code that runs the lookup and takes the first result, "because there's usually only one". This hides ambiguity from both the model and the user, and fails silently in exactly the cases that matter: two people with the same name, two orders on the same day. Resolvers may run lookups. They must not choose.</p>
+
+<h2>Make choices pleasant</h2>
+<p>When the planner asks the user to choose, show a choice interaction with enough context to decide, such as name with department, or order number with date and total, not a bare list of ids. A good choice UI turns ambiguity into a single tap.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="planner-policy.html">← Planner policy without prompt soup</a><a href="bilingual-compose.html">Bilingual compose for developers →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Lookup trace</dt><dd>Evidence list the planner uses to pick an entity id.</dd><dt>Replan</dt><dd>Second planning pass after new data arrives.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

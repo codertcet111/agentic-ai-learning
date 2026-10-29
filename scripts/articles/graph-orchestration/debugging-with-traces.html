@@ -1,0 +1,39 @@
+<!-- desc: A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run. -->
+<p>Agent bugs rarely produce stack traces. They produce answers that are slightly wrong, a tool that was not called, or a turn that took twelve seconds instead of three. Traces are how you turn "the bot was weird" into a specific node and a specific input.</p>
+
+<h2>Step 1: get an identifier</h2>
+<p>Ask for, or look up, one of: the request id from the client, the conversation id, or the approximate time and user. Your logs map any of these to a trace id (<a href="../agentic-development/steps/18-observability-tracing.html">step 18</a>). Never start debugging by guessing which turn it was.</p>
+
+<h2>Step 2: read the node sequence</h2>
+<p>Open the trace and list the nodes in order. Compare with what you expected:</p>
+<pre><code>Expected:  load_session → route → plan → resolve → invoke → plan → compose
+Actual:    load_session → route → plan → compose</code></pre>
+<p>Here the planner answered directly without calling the tool. Now you know which node to examine, and that node's LLM call is where the problem lies.</p>
+
+<h2>Step 3: inspect the decision</h2>
+<p>Open the planner's LLM observation and check, in order:</p>
+<ol>
+  <li><strong>Was the right tool in the prompt?</strong> Check the capability list. If the tool is missing, the cause is catalog filtering or session pinning, not the model.</li>
+  <li><strong>Was the tool's description clear?</strong> Two tools with overlapping descriptions cause most wrong-tool bugs.</li>
+  <li><strong>What did the model return?</strong> Read the structured output. A <code>kind: "answer"</code> with an invented balance points to a policy gap: the prompt did not say to always use the tool for user data.</li>
+  <li><strong>What was in the transcript window?</strong> Sometimes an earlier assistant message contains a number the model happily reused.</li>
+</ol>
+
+<h2>Step 4: reproduce locally</h2>
+<p>Turn the failing input into a golden case. Run it with the real model a few times. LLM behaviour is probabilistic, so a bug that appears in two runs out of ten is real and is still a bug. Once it fails reliably enough to observe, change one thing at a time: tool description, policy line, few-shot example.</p>
+
+<h2>Step 5: diff against a good run</h2>
+<p>If the behaviour used to work, find a trace of the same golden case from the last good release and diff the node sequences, LLM call counts and token counts. A refactor that added a node, a catalog change that added three similar tools, or a model version change usually shows up immediately.</p>
+
+<h2>Common findings</h2>
+<table>
+  <thead><tr><th>Symptom</th><th>Usual cause</th></tr></thead>
+  <tbody>
+    <tr><td>Tool not called</td><td>Tool missing from filtered catalog, or vague description</td></tr>
+    <tr><td>Wrong tool called</td><td>Overlapping descriptions between two capabilities</td></tr>
+    <tr><td>Planner loops</td><td>Tool result not summarized into state, so the planner never sees it</td></tr>
+    <tr><td>Slow turn</td><td>One slow <code>capability.invoke</code>, not the LLM</td></tr>
+    <tr><td>Wrong entity</td><td>Resolver picked the first lookup result</td></tr>
+  </tbody>
+</table>
+<p>Finish every investigation by adding the case to the golden suite, so the same bug cannot come back unnoticed.</p>

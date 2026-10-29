@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Streaming responses to the client | Agentic Field Notes</title>
+  <meta name="description" content="Stream LLM responses to chat clients safely: admit the turn first, stream only the compose step, handle client aborts, and reconcile the turn ledger so retries stay correct.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/llm-engineering/streaming-dev.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/llm-engineering/streaming-dev.html">
+  <meta property="og:title" content="Streaming responses to the client">
+  <meta property="og:description" content="Stream LLM responses to chat clients safely: admit the turn first, stream only the compose step, handle client aborts, and reconcile the turn ledger so retries stay correct.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Streaming responses to the client","description":"Stream LLM responses to chat clients safely: admit the turn first, stream only the compose step, handle client aborts, and reconcile the turn ledger so retries stay correct.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">LLM Engineering</a> / Streaming responses to the client</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Streaming responses to the client</h1>
+        <p class="lead" itemprop="description">Stream LLM responses to chat clients safely: admit the turn first, stream only the compose step, handle client aborts, and reconcile the turn ledger so retries stay correct.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="default"></div>
+      <p>Streaming makes an assistant feel fast: the first words appear in under a second instead of after the whole answer is ready. In an agent, though, most of the turn is planning and tool calls, which have nothing to stream. Streaming needs to fit around the graph, not replace it.</p>
+
+<h2>What to stream</h2>
+<ul>
+  <li><strong>Progress events</strong> during planning and tool calls: "Checking your leave balance…". These are short status messages tied to graph nodes, not model tokens.</li>
+  <li><strong>Compose tokens</strong>: the final answer, streamed as it is generated.</li>
+  <li><strong>Structured blocks</strong> (tables, cards, forms): sent as complete events when ready, never token by token.</li>
+</ul>
+
+<h2>Transport</h2>
+<p>Server-sent events (SSE) are the usual choice: plain HTTP, easy through proxies and load balancers, and natively supported by browsers. Use typed events:</p>
+<pre><code>event: turn.accepted     data: {"turn_id": "trn_88", "revision": 15}
+event: progress          data: {"node": "invoke", "label_key": "checking_balance"}
+event: text.delta        data: {"text": "You have "}
+event: text.delta        data: {"text": "12 days left."}
+event: block             data: {"type": "table", ...}
+event: turn.completed    data: {"message_id": "msg_…", "sequence": 42}</code></pre>
+
+<h2>Order of operations</h2>
+<ol>
+  <li><strong>Admit the turn first</strong> (fence, ledger entry). Only then open the stream with <code>turn.accepted</code>. A rejected turn gets a normal HTTP error, not a stream.</li>
+  <li>Run the graph, emitting progress events.</li>
+  <li>Stream compose tokens as they arrive.</li>
+  <li><strong>Persist the final message</strong> and complete the ledger entry, then send <code>turn.completed</code> with the stored message id.</li>
+</ol>
+<p>The persisted message is the source of truth. Clients that lose the connection fetch it by sequence rather than trying to reassemble partial deltas.</p>
+
+<h2>Aborts</h2>
+<p>When the user presses Stop or closes the tab:</p>
+<ul>
+  <li>If the turn is still planning or invoking reads, cancel the graph run and mark the ledger <code>cancelled</code>.</li>
+  <li>If a write is in flight, let it finish. Cancelling mid-write leaves the user unsure whether it happened. Persist the result, and show it when they return.</li>
+  <li>If compose is streaming, stop generation and persist what was produced with a "stopped" marker, or discard it. Choose one behaviour and keep it consistent.</li>
+</ul>
+
+<h2>Retries</h2>
+<p>A client that reconnects with the same <code>client_request_id</code> must not start a second run. Admission returns the existing turn's state: still running (reattach or poll) or completed (here is the message). See <a href="../data-patterns/idempotency-patterns.html">idempotency patterns</a>.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="model-routing.html">← When to use small vs large models</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>SSE</dt><dd>Server-sent events transport often used for token streams.</dd><dt>Abort</dt><dd>Client signal to stop generation mid-turn.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

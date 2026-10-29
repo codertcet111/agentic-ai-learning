@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 4 — Model sessions and conversations | Agentic Field Notes</title>
+  <meta name="description" content="Model sessions (who is chatting and under what scope) separately from conversations (individual chat threads with revisions, limits and lifecycle).">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/04-sessions-conversations.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/04-sessions-conversations.html">
+  <meta property="og:title" content="Step 4 — Model sessions and conversations">
+  <meta property="og:description" content="Model sessions (who is chatting and under what scope) separately from conversations (individual chat threads with revisions, limits and lifecycle).">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 4 — Model sessions and conversations","description":"Model sessions (who is chatting and under what scope) separately from conversations (individual chat threads with revisions, limits and lifecycle).","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 4</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 4 — Model sessions and conversations</h1>
+        <p class="lead" itemprop="description">Model sessions (who is chatting and under what scope) separately from conversations (individual chat threads with revisions, limits and lifecycle).</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>Chat products tend to start with a single "chat" table and regret it. Two concepts hide inside it, and they have different lifetimes.</p>
+<ul>
+  <li>A <strong>session</strong> answers <em>who</em> is chatting and under what terms: principal, tenant, expiry, and which version of the tool catalog they were given.</li>
+  <li>A <strong>conversation</strong> answers <em>which thread</em>: its messages, revision counter, limits and whether it is still open.</li>
+</ul>
+<p>One session may own many conversations. A conversation belongs to exactly one session.</p>
+
+<h2>Session document</h2>
+<pre><code>{
+  "_id": "ses_7f3a…",
+  "principal_id": "emp_1042",
+  "tenant_id": "acme",
+  "created_at": "2026-10-01T09:12:00Z",
+  "expires_at": "2026-10-01T21:12:00Z",
+  "catalog_hash": "c9e1…",
+  "capabilities": ["leave.balance.read", "leave.request.create"],
+  "locale": "en"
+}</code></pre>
+<p>Notice what is missing: no access token, no cookies, no email. The session stores opaque identifiers and the metadata the orchestrator needs to make decisions. The token arrives fresh with every request (step 3).</p>
+<p>The <code>catalog_hash</code> pins the tool catalog version for the session. If a deploy changes a tool's schema in the middle of someone's chat, their session keeps using the version it started with until it expires (step 9).</p>
+
+<h2>Conversation document</h2>
+<pre><code>{
+  "_id": "cnv_19b2…",
+  "session_id": "ses_7f3a…",
+  "status": "active",
+  "revision": 14,
+  "message_count": 27,
+  "max_messages": 200,
+  "title": "Leave next week",
+  "created_at": "…",
+  "updated_at": "…"
+}</code></pre>
+<ul>
+  <li><strong>revision</strong> increases on every accepted turn. Clients send the revision they last saw; the server rejects stale writes. This is the foundation for turn admission in step 5.</li>
+  <li><strong>status</strong> is <code>active</code> or <code>deactivated</code>. Deactivation is terminal: the user hit the message limit, closed the thread, or an admin ended it.</li>
+  <li><strong>message_count</strong> and <strong>max_messages</strong> cap runaway threads and the token costs that come with them.</li>
+</ul>
+
+<h2>Lifecycle</h2>
+<ol>
+  <li>User signs in to the host app. The host calls the orchestrator to create or refresh a session.</li>
+  <li>User opens the assistant. The client lists conversations for the session, or creates a new one.</li>
+  <li>Each message is a turn against one conversation and one expected revision.</li>
+  <li>Session expiry blocks new turns, but conversations remain readable for history.</li>
+</ol>
+
+<h2>Indexes</h2>
+<pre><code>sessions:      { principal_id: 1, expires_at: -1 }
+               { expires_at: 1 }  with TTL if you purge old sessions
+conversations: { session_id: 1, updated_at: -1 }
+               { status: 1, updated_at: -1 }</code></pre>
+
+<h2>Edge cases worth testing</h2>
+<ul>
+  <li>Two browser tabs on the same conversation: the second sends a stale revision and must get a clear, recoverable error.</li>
+  <li>Session expires mid-turn: the turn in flight finishes; the next one is refused with a re-authenticate signal.</li>
+  <li>Conversation reaches its limit: the final assistant message tells the user to start a new thread, and the UI disables input.</li>
+</ul>
+<p>Keeping sessions and conversations apart makes all three of these straightforward. Mixing them makes each one a special case.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Integration-test conversation revision rejection before you ship mobile offline queue.</div><p class="meta"><a href="03-request-context.html">← Previous</a> · <a href="05-turn-admission.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Session document</dt><dd>Durable record of a signed-in chat principal and expiry.</dd><dt>Conversation revision</dt><dd>Monotonic counter used to reject stale client writes.</dd><dt>Deactivation</dt><dd>Terminal state when limits are hit or the user ends the thread.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Running golden evals locally | Agentic Field Notes</title>
+  <meta name="description" content="Run golden evaluation cases locally and in CI: fast stub-LLM runs for plumbing, nightly live-model runs for behaviour, tag selection and readable diff reports.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/testing-ai-dev/golden-runner-dev.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/testing-ai-dev/golden-runner-dev.html">
+  <meta property="og:title" content="Running golden evals locally">
+  <meta property="og:description" content="Run golden evaluation cases locally and in CI: fast stub-LLM runs for plumbing, nightly live-model runs for behaviour, tag selection and readable diff reports.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Running golden evals locally","description":"Run golden evaluation cases locally and in CI: fast stub-LLM runs for plumbing, nightly live-model runs for behaviour, tag selection and readable diff reports.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Testing as an AI Dev</a> / Running golden evals locally</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Running golden evals locally</h1>
+        <p class="lead" itemprop="description">Run golden evaluation cases locally and in CI: fast stub-LLM runs for plumbing, nightly live-model runs for behaviour, tag selection and readable diff reports.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="default"></div>
+      <p>The golden runner is the command you will use more than any other while working on prompts and graph changes. It needs to be fast in the common case, honest in the nightly case, and produce output you can read in a terminal.</p>
+
+<h2>Two modes</h2>
+<table>
+  <thead><tr><th></th><th>Stub mode</th><th>Live mode</th></tr></thead>
+  <tbody>
+    <tr><td>LLM</td><td>Scripted fixtures</td><td>Real models via gateway</td></tr>
+    <tr><td>Upstream</td><td>Fake responses</td><td>Fake responses or sandbox</td></tr>
+    <tr><td>Speed</td><td>Seconds for hundreds of cases</td><td>Minutes</td></tr>
+    <tr><td>Cost</td><td>Free</td><td>Real tokens</td></tr>
+    <tr><td>Proves</td><td>Plumbing, persistence, flows</td><td>Model decisions</td></tr>
+    <tr><td>When</td><td>Every pull request, locally all the time</td><td>Nightly, and on prompt or model changes</td></tr>
+  </tbody>
+</table>
+
+<h2>Commands</h2>
+<pre><code>evals run                              # stub mode, all cases
+evals run --tags leave,write           # subset while working on a feature
+evals run --case leave.request.ambiguous-approver.en -v   # one case, verbose
+evals run --live --tags routing --repeat 3                 # real model, 3 runs each
+evals diff --baseline baselines/2026-10-20                 # compare with approved run</code></pre>
+
+<h2>Verbose output for one case</h2>
+<pre><code>leave.request.ambiguous-approver.en   PASS
+  turn 1  nodes: load_session route plan resolve invoke plan ask
+          llm: plan×2  tokens: 5,830  latency: 3.1s
+          capabilities: employees.search
+          pending: choice (2 options)
+  turn 2  nodes: resume ask
+          pending: confirmation
+  turn 3  nodes: resume invoke plan compose
+          capabilities: leave.request.create ×1</code></pre>
+<p>This shows most of what you would look for in a trace UI, right in the terminal, in one second.</p>
+
+<h2>Repeats for live runs</h2>
+<p>Real models vary between runs. Run each live case several times and report pass rates, for example "routing correct 5/5, tools correct 4/5". A case that drops from 5/5 to 3/5 after a change is a real regression even though it "passed" once.</p>
+
+<h2>Reports</h2>
+<p>The runner writes JSON results and a Markdown summary. CI attaches the summary to the pull request: totals by tag, newly failing cases, and the trace-diff highlights (node sequences, LLM calls, tokens). Reviewers then see behaviour changes next to code changes.</p>
+
+<h2>Tagging strategy</h2>
+<p>Tag by domain (<code>leave</code>, <code>orders</code>), by risk (<code>write</code>, <code>safety</code>), by shape (<code>multi-turn</code>, <code>ambiguity</code>) and by language. Release gates use the risk tags. Day-to-day work uses the domain tags.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="fakes-mongo-redis.html">← Fakes for Mongo and Redis</a><a href="testing-observability.html">Testing observability hooks →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Golden runner</dt><dd>CLI executing JSON cases and reporting diffs.</dd><dt>Nightly job</dt><dd>Scheduled pipeline with live model credentials.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!-- desc: Let structured results render as tables, cards or forms through presentation modes, while compose still produces bilingual fallback text for every reply. -->
+<p>Many good assistant answers are not paragraphs. A list of upcoming leave is a table. An order is a card with a status badge. A choice between two approvers is a set of buttons. <strong>Presentation modes</strong> let the graph say how a result should be shown, and let the client render it natively.</p>
+
+<h2>The presentation block</h2>
+<pre><code>{
+  "presentation": {
+    "mode": "table",                     // text | table | card | list | form | chart
+    "source_step_result_id": "sr_…",
+    "columns": [
+      {"key": "type",  "label": {"en": "Type",  "ar": "النوع"}},
+      {"key": "start", "label": {"en": "Start", "ar": "البداية"}},
+      {"key": "days",  "label": {"en": "Days",  "ar": "الأيام"}}
+    ]
+  },
+  "text": {
+    "en": "You have two upcoming leave periods.",
+    "ar": "لديك فترتا إجازة قادمتان."
+  }
+}</code></pre>
+<p>The client picks a renderer by <code>mode</code>. If it does not support that mode (an older app version, a voice channel, an email digest) it shows the text.</p>
+
+<h2>Text is never optional</h2>
+<p>Every assistant message carries fallback text in each supported language, even when the UI is primary. Reasons:</p>
+<ul>
+  <li>Screen readers and accessibility tools need words.</li>
+  <li>Notifications and message previews show text only.</li>
+  <li>Transcripts sent to the LLM in later turns are built from text, not from tables.</li>
+  <li>Older clients cannot render new modes.</li>
+</ul>
+<p>The text should summarize the result, not repeat it. "You have two upcoming leave periods" next to a table is right. Writing out every row in prose underneath the same table is noise.</p>
+
+<h2>When compose runs</h2>
+<p>For pure data results with a clear mode, a template can produce the fallback text without an LLM call ("You have {n} upcoming leave periods"). Compose runs when the answer needs judgement: explaining a conflict, combining two results, answering a "why" question. The <code>response_finalized</code> flag in state ensures only one node produces the final reply, so a later node cannot accidentally compose again and overwrite it.</p>
+
+<h2>Bilingual compose</h2>
+<p>If your product serves more than one language, the compose schema should require every language field, as in <code>ComposePayload</code> in step 13. Generate both in one call. The model keeps the meaning aligned and you avoid a second round trip. Right-to-left languages such as Arabic need the client to set <code>dir="rtl"</code> on the text container, and tables need their column order mirrored. That is client work, but the server should mark the locale on every message so the client knows. See <a href="../../prompts-tools/bilingual-compose.html">bilingual compose</a> for prompt details.</p>
+
+<h2>Testing</h2>
+<p>Snapshot-test the presentation block and both language strings for each golden case. When a capability's response shape changes, the snapshot diff shows exactly which columns moved, before a user sees an empty table.</p>

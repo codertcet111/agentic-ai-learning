@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLM-as-judge—with guardrails | Agentic Field Notes</title>
+  <meta name="description" content="Use LLM-as-judge evaluation for qualities like helpfulness and groundedness with clear rubrics and calibration, while keeping safety and tool correctness on deterministic checks.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/evaluation/llm-judges.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/evaluation/llm-judges.html">
+  <meta property="og:title" content="LLM-as-judge—with guardrails">
+  <meta property="og:description" content="Use LLM-as-judge evaluation for qualities like helpfulness and groundedness with clear rubrics and calibration, while keeping safety and tool correctness on deterministic checks.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"LLM-as-judge—with guardrails","description":"Use LLM-as-judge evaluation for qualities like helpfulness and groundedness with clear rubrics and calibration, while keeping safety and tool correctness on deterministic checks.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Eval &amp; Observability</a> / LLM-as-judge—with guardrails</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">LLM-as-judge—with guardrails</h1>
+        <p class="lead" itemprop="description">Use LLM-as-judge evaluation for qualities like helpfulness and groundedness with clear rubrics and calibration, while keeping safety and tool correctness on deterministic checks.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="eval"></div>
+      <p>Some qualities of an answer cannot be checked with an exact assertion: is it clear, is it supported by the cited document, does it answer what was asked? An LLM acting as a judge, given a rubric, can score these at scale. Used well, it is a useful tool. Used for the wrong things, it gives false confidence.</p>
+
+<h2>What judges are good for</h2>
+<ul>
+  <li><strong>Groundedness</strong>: is every claim in the answer supported by the retrieved chunks?</li>
+  <li><strong>Relevance</strong>: does the answer address the user's actual question?</li>
+  <li><strong>Clarity and tone</strong>: is it concise, polite and in the right language?</li>
+  <li><strong>Comparisons</strong>: is answer B better than answer A for the same input (pairwise)?</li>
+</ul>
+
+<h2>What judges must not decide</h2>
+<ul>
+  <li><strong>Safety allow or deny.</strong> Whether the assistant refused to reveal another employee's salary is a deterministic check on which capabilities were called and what the response contained.</li>
+  <li><strong>Tool correctness.</strong> Whether the right capability was called with the right arguments is an exact comparison.</li>
+  <li><strong>Write behaviour.</strong> Whether a confirmation was shown and exactly one record was created is counted, not judged.</li>
+</ul>
+<div class="callout">If a wrong verdict would let a harmful behaviour ship, the check must be deterministic.</div>
+
+<h2>Writing a rubric</h2>
+<pre><code>You are grading an HR assistant's answer.
+
+Inputs: QUESTION, RETRIEVED_PASSAGES, ANSWER.
+
+Score groundedness from 1 to 3:
+3 = Every factual claim in ANSWER is directly supported by RETRIEVED_PASSAGES.
+2 = Mostly supported; one minor claim lacks support but is not misleading.
+1 = Contains a claim that is unsupported or contradicts the passages.
+
+Return JSON: {"score": 1|2|3, "unsupported_claims": [string], "reasoning": string}</code></pre>
+<p>Use few, clearly defined levels. A 1–10 scale invites inconsistency, while three levels with written criteria give stable results. Ask for the reasoning and the specific unsupported claims. They make the score auditable and are often more useful than the number itself.</p>
+
+<h2>Calibrate against humans</h2>
+<p>Before trusting a judge, have two people score 50 or so answers with the same rubric, then compare with the judge's scores. Where they disagree, improve the rubric or the examples. Repeat this whenever you change the judge model. A judge that agrees with humans less often than humans agree with each other is not ready.</p>
+
+<h2>Known biases</h2>
+<ul>
+  <li><strong>Position bias</strong> in pairwise comparisons: run both orders and count only consistent wins.</li>
+  <li><strong>Length bias</strong>: longer answers tend to score higher. Make conciseness part of the rubric.</li>
+  <li><strong>Self-preference</strong>: a model may favour text written by itself. Prefer a different model family as judge when you can.</li>
+</ul>
+
+<h2>Use judge scores as trends</h2>
+<p>Track average judge scores per release and per tag, and investigate drops. Do not block releases on small movements in judge scores. Block on deterministic failures, and review judge regressions by hand.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="golden-files.html">← Golden JSON cases</a><a href="trace-compare.html">Trace compare across releases →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Rubric</dt><dd>Scoring criteria given to a judge model.</dd><dt>Deterministic assert</dt><dd>Exact match expectation in tests.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

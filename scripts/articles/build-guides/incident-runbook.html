@@ -1,0 +1,47 @@
+<!-- desc: An on-call runbook for agentic AI APIs: triage by request id, conversation and trace, separate upstream outages from model regressions, and the mitigations to reach for first. -->
+<p>When an AI assistant misbehaves in production, the cause is usually not "the model got worse". It is an upstream API, a deploy, a catalog change, a quota, or a data problem. This runbook helps on-call engineers find which one quickly.</p>
+
+<h2>1. Classify the incident</h2>
+<table>
+  <thead><tr><th>Symptom</th><th>Likely area</th><th>First place to look</th></tr></thead>
+  <tbody>
+    <tr><td>Errors for everyone</td><td>Deploy, database, LLM gateway</td><td>Error tracker by release; gateway status</td></tr>
+    <tr><td>Errors for one feature</td><td>One upstream API</td><td>Failure records by <code>capability_id</code></td></tr>
+    <tr><td>Slow turns</td><td>Upstream latency or LLM latency</td><td>Span durations: invoke vs llm.call</td></tr>
+    <tr><td>Wrong answers, no errors</td><td>Catalog, prompt or model change</td><td>Recent deploys; golden suite on current release</td></tr>
+    <tr><td>"It's stuck"</td><td>Turn fence, worker crash</td><td>Turn ledger for the conversation</td></tr>
+    <tr><td>Cost spike</td><td>Loop, prompt growth, abuse</td><td>LLM calls per turn; usage by tenant</td></tr>
+  </tbody>
+</table>
+
+<h2>2. Follow one example end to end</h2>
+<ol>
+  <li><strong>Request id</strong> → logs for that request.</li>
+  <li><strong>Conversation id</strong> → transcript and turn ledger in MongoDB.</li>
+  <li><strong>Trace id</strong> → span tree in the tracing tool: which node, which call, how long.</li>
+  <li><strong>Failure record</strong> → error class and runbook action.</li>
+</ol>
+<p>One fully understood example is worth more than a dashboard of averages.</p>
+
+<h2>3. Separate upstream from model</h2>
+<p>If <code>capability.invoke</code> spans show 5xx responses, timeouts or open circuits, this is an upstream incident. Tell the owning team, confirm the assistant shows a "service busy" message, and do not change prompts. If invokes are healthy but plans are wrong, it is an orchestration or model issue. Check what changed: release, catalog hash, model version in the gateway.</p>
+
+<h2>4. Mitigations, from least to most drastic</h2>
+<ol>
+  <li><strong>Disable a capability</strong> via feature flag. The agent stops offering it and says so.</li>
+  <li><strong>Pin the catalog</strong> to the previous hash if a catalog change caused it.</li>
+  <li><strong>Switch model alias</strong> in the gateway back to the previous model version.</li>
+  <li><strong>Roll back</strong> the orchestrator release.</li>
+  <li><strong>Turn the assistant off</strong> for affected tenants with a clear banner.</li>
+</ol>
+<p>Each of these should be a documented, tested switch, not an improvised change during an incident.</p>
+
+<h2>5. Communicate</h2>
+<p>Users see the assistant, not your architecture. If a feature is down because of an upstream outage, a short status message in the chat UI prevents a flood of "the bot is broken" tickets.</p>
+
+<h2>6. After the incident</h2>
+<ul>
+  <li>Add the failing scenario to the golden suite.</li>
+  <li>Add or tune the alert that should have fired first.</li>
+  <li>If the fix was a prompt change, add a test that would fail if the old prompt came back.</li>
+</ul>

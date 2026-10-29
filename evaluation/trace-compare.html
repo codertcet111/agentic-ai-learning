@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trace compare across releases | Agentic Field Notes</title>
+  <meta name="description" content="Compare agent traces across releases: run golden cases, export node sequences, LLM call counts, tokens and latency, and diff them against an approved baseline.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/evaluation/trace-compare.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/evaluation/trace-compare.html">
+  <meta property="og:title" content="Trace compare across releases">
+  <meta property="og:description" content="Compare agent traces across releases: run golden cases, export node sequences, LLM call counts, tokens and latency, and diff them against an approved baseline.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Trace compare across releases","description":"Compare agent traces across releases: run golden cases, export node sequences, LLM call counts, tokens and latency, and diff them against an approved baseline.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Eval &amp; Observability</a> / Trace compare across releases</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Trace compare across releases</h1>
+        <p class="lead" itemprop="description">Compare agent traces across releases: run golden cases, export node sequences, LLM call counts, tokens and latency, and diff them against an approved baseline.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="eval"></div>
+      <p>Pass/fail tells you whether a golden case still meets its expectations. It does not tell you that the case now takes five LLM calls instead of three, or that a refactor reordered two nodes. Trace comparison catches those quieter changes.</p>
+
+<h2>What to extract from each trace</h2>
+<pre><code>{
+  "case_id": "leave.balance.basic.en",
+  "release": "2026.10.28",
+  "nodes": ["load_session", "route", "plan", "resolve", "invoke", "plan", "compose"],
+  "llm_calls": [{"purpose": "plan", "model": "large", "in": 2810, "out": 64},
+                {"purpose": "plan", "model": "large", "in": 3020, "out": 41},
+                {"purpose": "compose", "model": "large", "in": 1210, "out": 88}],
+  "capabilities": ["leave.balance.read"],
+  "total_tokens": 7233,
+  "latency_ms": 2840
+}</code></pre>
+<p>This summary is small, stable and can be diffed. Produce it by walking the spans (from your tracing backend's API, or an in-memory exporter during the eval run) and keeping only names, counts and numbers, never text.</p>
+
+<h2>Baselines</h2>
+<p>After a release is approved, store its summaries as the baseline. Each new run is compared against the most recent baseline, not against the previous unapproved run, so regressions do not quietly become the new normal.</p>
+
+<h2>What the diff shows</h2>
+<pre><code>leave.balance.basic.en
+  nodes:        + evaluate_condition  (after invoke)
+  llm_calls:    3 → 4   (+1 plan)
+  total_tokens: 7233 → 9871  (+36%)
+  latency_ms:   2840 → 3610  (+27%)</code></pre>
+<p>A report like this, generated in CI and attached to the pull request, turns "the assistant feels slower" into a specific change with a specific cause.</p>
+
+<h2>Thresholds</h2>
+<ul>
+  <li><strong>Node sequence changed</strong>: always flag it for review. It may be intended, but someone should confirm.</li>
+  <li><strong>LLM calls increased</strong>: flag any increase on cases tagged as simple.</li>
+  <li><strong>Tokens</strong>: flag increases above 15–20%. Small noise is normal with real models.</li>
+  <li><strong>Latency</strong>: compare medians over several runs. A single run is too noisy.</li>
+</ul>
+
+<h2>Real models are not deterministic</h2>
+<p>With live models, the same case can take slightly different paths on different runs. Run each case several times (three to five) and compare distributions: "planned twice in 4 of 5 runs, previously 1 of 5" is a real signal, while one run differing is not. With the stub LLM, runs are deterministic and any diff is a code change.</p>
+
+<h2>Tooling</h2>
+<p>Langfuse supports grouping evaluation traces into datasets and experiment runs and comparing them side by side, which covers much of this. A small script that produces the JSON summaries and a Markdown diff is still worth having. It works in CI, needs no UI, and its output can be committed next to the baseline.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="llm-judges.html">← LLM-as-judge—with guardrails</a><a href="observability-stack.html">Observability stack choices →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Span diff</dt><dd>Comparison of node order between two runs.</dd><dt>Baseline</dt><dd>Approved trace from a known-good release.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

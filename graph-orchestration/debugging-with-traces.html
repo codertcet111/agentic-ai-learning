@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Debugging graph bugs with traces | Agentic Field Notes</title>
+  <meta name="description" content="A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/debugging-with-traces.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/debugging-with-traces.html">
+  <meta property="og:title" content="Debugging graph bugs with traces">
+  <meta property="og:description" content="A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Debugging graph bugs with traces","description":"A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Graph &amp; Orchestration</a> / Debugging graph bugs with traces</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Debugging graph bugs with traces</h1>
+        <p class="lead" itemprop="description">A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>Agent bugs rarely produce stack traces. They produce answers that are slightly wrong, a tool that was not called, or a turn that took twelve seconds instead of three. Traces are how you turn "the bot was weird" into a specific node and a specific input.</p>
+
+<h2>Step 1: get an identifier</h2>
+<p>Ask for, or look up, one of: the request id from the client, the conversation id, or the approximate time and user. Your logs map any of these to a trace id (<a href="../agentic-development/steps/18-observability-tracing.html">step 18</a>). Never start debugging by guessing which turn it was.</p>
+
+<h2>Step 2: read the node sequence</h2>
+<p>Open the trace and list the nodes in order. Compare with what you expected:</p>
+<pre><code>Expected:  load_session → route → plan → resolve → invoke → plan → compose
+Actual:    load_session → route → plan → compose</code></pre>
+<p>Here the planner answered directly without calling the tool. Now you know which node to examine, and that node's LLM call is where the problem lies.</p>
+
+<h2>Step 3: inspect the decision</h2>
+<p>Open the planner's LLM observation and check, in order:</p>
+<ol>
+  <li><strong>Was the right tool in the prompt?</strong> Check the capability list. If the tool is missing, the cause is catalog filtering or session pinning, not the model.</li>
+  <li><strong>Was the tool's description clear?</strong> Two tools with overlapping descriptions cause most wrong-tool bugs.</li>
+  <li><strong>What did the model return?</strong> Read the structured output. A <code>kind: "answer"</code> with an invented balance points to a policy gap: the prompt did not say to always use the tool for user data.</li>
+  <li><strong>What was in the transcript window?</strong> Sometimes an earlier assistant message contains a number the model happily reused.</li>
+</ol>
+
+<h2>Step 4: reproduce locally</h2>
+<p>Turn the failing input into a golden case. Run it with the real model a few times. LLM behaviour is probabilistic, so a bug that appears in two runs out of ten is real and is still a bug. Once it fails reliably enough to observe, change one thing at a time: tool description, policy line, few-shot example.</p>
+
+<h2>Step 5: diff against a good run</h2>
+<p>If the behaviour used to work, find a trace of the same golden case from the last good release and diff the node sequences, LLM call counts and token counts. A refactor that added a node, a catalog change that added three similar tools, or a model version change usually shows up immediately.</p>
+
+<h2>Common findings</h2>
+<table>
+  <thead><tr><th>Symptom</th><th>Usual cause</th></tr></thead>
+  <tbody>
+    <tr><td>Tool not called</td><td>Tool missing from filtered catalog, or vague description</td></tr>
+    <tr><td>Wrong tool called</td><td>Overlapping descriptions between two capabilities</td></tr>
+    <tr><td>Planner loops</td><td>Tool result not summarized into state, so the planner never sees it</td></tr>
+    <tr><td>Slow turn</td><td>One slow <code>capability.invoke</code>, not the LLM</td></tr>
+    <tr><td>Wrong entity</td><td>Resolver picked the first lookup result</td></tr>
+  </tbody>
+</table>
+<p>Finish every investigation by adding the case to the golden suite, so the same bug cannot come back unnoticed.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="human-in-the-loop.html">← Human-in-the-loop pauses</a><a href="state-size.html">Keeping GraphState small →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Golden replay</dt><dd>Re-running a fixed scenario to compare traces.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

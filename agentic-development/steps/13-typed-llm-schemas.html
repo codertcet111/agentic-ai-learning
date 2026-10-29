@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 13 — Typed Pydantic outputs for every LLM call | Agentic Field Notes</title>
+  <meta name="description" content="Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/13-typed-llm-schemas.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/13-typed-llm-schemas.html">
+  <meta property="og:title" content="Step 13 — Typed Pydantic outputs for every LLM call">
+  <meta property="og:description" content="Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 13 — Typed Pydantic outputs for every LLM call","description":"Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 13</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 13 — Typed Pydantic outputs for every LLM call</h1>
+        <p class="lead" itemprop="description">Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>An agent graph is only as reliable as the weakest LLM output it accepts. If any node parses free text with regular expressions or trusts a JSON blob without validating it, that node is where the 3 a.m. bug lives. The rule for this step is simple: every LLM call returns a Pydantic model.</p>
+
+<h2>One schema per purpose</h2>
+<pre><code>from pydantic import BaseModel, Field
+from typing import Literal
+
+class PlanDecision(BaseModel):
+    kind: Literal["call_tool", "need_input", "answer"]
+    capability_id: str | None = None
+    intent: str = Field(max_length=300)
+    missing: list[str] = []
+
+class ArgumentFill(BaseModel):
+    arguments: dict
+    unresolved: list[str] = []
+    needs_lookup: str | None = None
+
+class ConditionResult(BaseModel):
+    result: bool
+    reason: str = Field(max_length=200)
+
+class ComposePayload(BaseModel):
+    text_en: str
+    text_ar: str
+    follow_up_suggestions: list[str] = Field(default_factory=list, max_length=3)</code></pre>
+<p>Keep these in one <code>schemas</code> module. Prompts, stubs and tests all import from there, so there is one source of truth for what each step produces.</p>
+
+<h2>Use the provider's structured output support</h2>
+<p>Most model APIs now support constraining output to a JSON Schema, either through tool or function calling or through a dedicated response format option. Pass <code>PlanDecision.model_json_schema()</code> through your gateway and you will get syntactically valid JSON nearly every time. You still validate with Pydantic, because a valid shape can still carry invalid values, such as a <code>capability_id</code> that is not in the catalog.</p>
+
+<h2>Validate, repair once, then fail safe</h2>
+<pre><code>async def call_typed(llm, prompt, schema: type[T]) -&gt; T:
+    raw = await llm.complete(prompt, response_schema=schema)
+    try:
+        return schema.model_validate_json(raw)
+    except ValidationError as e:
+        repaired = await llm.complete(repair_prompt(raw, e, schema),
+                                      response_schema=schema)
+        return schema.model_validate_json(repaired)   # raises if still bad</code></pre>
+<p>One repair attempt is enough. If the second call also fails, raise a typed error that the graph turns into a polite apology and a failure record. Unbounded repair loops are how a single bad turn becomes a large bill.</p>
+
+<h2>Semantic validation</h2>
+<p>Add validators that check values against the turn's context:</p>
+<ul>
+  <li><code>capability_id</code> must be in the filtered catalog for this session.</li>
+  <li><code>arguments</code> must validate against that capability's parameter schema.</li>
+  <li>Dates must be real dates and, where relevant, not in the past.</li>
+</ul>
+<p>Pass the context in with Pydantic's validation context rather than global state.</p>
+
+<h2>Keep policy in one home</h2>
+<p>The prompt for each call has two parts: the schema (what shape to return) and the policy (how to decide). Put node-level policy in the graph definition module and persona and voice in the agent definition. Do not repeat "never invent an employee id" in five prompts. When rules are duplicated, they drift, and the model receives conflicting instructions.</p>
+
+<h2>Schema changes are contract changes</h2>
+<p>When a schema changes, update in the same pull request: the prompt examples, the stub LLM fixtures (<a href="../../llm-engineering/llm-stub-ci.html">LLM_STUB</a>) and the golden cases that assert on it. CI that runs against stale stubs reports green while production breaks.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> When schema changes, update stub LLM fixtures in the same PR or CI will lie.</div><p class="meta"><a href="12-graph-nodes-flow.html">← Previous</a> · <a href="14-argument-resolution.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Structured output</dt><dd>Model response parsed into a validated object, not free text.</dd><dt>Planner</dt><dd>LLM step that selects the next capability or completion.</dd><dt>Repair loop</dt><dd>Retry or fallback when validation fails.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!-- desc: Get reliable structured outputs from LLMs in production: Pydantic schemas, provider-native JSON schema modes, semantic validation, a single repair attempt and safe failure. -->
+<p>An agent's decisions travel between nodes as data. If that data is free text parsed with string matching, every model update is a risk. Structured outputs make LLM calls behave like typed function calls, mostly.</p>
+
+<h2>Three layers</h2>
+<ol>
+  <li><strong>Constrain generation.</strong> Use the provider's structured output feature: tool or function calling with a JSON Schema, or a JSON-schema response format. This makes syntactically invalid JSON rare.</li>
+  <li><strong>Validate shape and types.</strong> Parse into a Pydantic model. Missing fields, wrong types and unexpected enum values are rejected here.</li>
+  <li><strong>Validate meaning.</strong> Check values against the turn's context: the capability exists in this session's catalog, the arguments match its parameter schema, the dates are real.</li>
+</ol>
+
+<h2>Design schemas for models</h2>
+<ul>
+  <li>Keep them flat and small. Deeply nested optional objects are where models make mistakes.</li>
+  <li>Use enums for choices (<code>Literal["call_tool", "need_input", "answer"]</code>) rather than free strings.</li>
+  <li>Add field descriptions. Most providers pass them to the model, and they work like inline instructions.</li>
+  <li>Put a short reasoning or intent field <em>before</em> the decision fields when you want the model to think first. Models generate fields in order.</li>
+  <li>Avoid fields the model cannot know, such as ids it has not seen. Make those come from lookups.</li>
+</ul>
+
+<h2>Repair once, then fail safe</h2>
+<pre><code>try:
+    out = Schema.model_validate_json(raw, context=turn_ctx)
+except ValidationError as err:
+    raw2 = await gateway.complete(alias, repair_messages(raw, err), schema=Schema, purpose="repair")
+    out = Schema.model_validate_json(raw2, context=turn_ctx)   # second failure raises</code></pre>
+<p>The repair prompt includes the original output and the validation errors, and asks for corrected JSON only. If that also fails, raise a typed <code>llm_invalid_output</code> error. The graph turns it into a short apology and a failure record. Never pass an unvalidated dictionary on to <code>invoke_capability</code>.</p>
+
+<h2>Measure it</h2>
+<p>Record a counter for first-try validation failures and repairs per schema and per model. A sudden rise after a model update or prompt change is an early warning, well before users notice. A healthy system has first-try failure rates well under one percent.</p>
+
+<h2>Watch for schema drift</h2>
+<p>Examples in the prompt, the Pydantic model, the stub fixtures and the golden cases must agree. When one changes, change them all in the same pull request. A prompt example showing a field that the schema no longer has is a reliable way to raise validation failures.</p>

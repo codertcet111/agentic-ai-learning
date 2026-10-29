@@ -1,0 +1,28 @@
+<!-- desc: Protect data-changing actions in AI assistants with explicit confirmation: graph-enforced confirmation steps, fingerprints, explicit action flags and operation ids against duplicates. -->
+<p>An assistant that reads data can mislead. An assistant that writes data can do damage. Every write capability should require an explicit, informed confirmation from the user, enforced by code rather than requested in a prompt.</p>
+
+<h2>Four controls</h2>
+<ol>
+  <li><strong>Catalog flag.</strong> Write capabilities declare <code>requires_confirmation: true</code>. Catalog validation fails if a write lacks it.</li>
+  <li><strong>Graph rule.</strong> The graph always routes such capabilities through a confirmation interaction before invoke. The planner cannot skip it, because it is an edge in the graph, not an instruction.</li>
+  <li><strong>Explicit action flag.</strong> The provider refuses to execute a write unless <code>explicit_action=true</code>, which only the confirmation-resume path sets.</li>
+  <li><strong>Operation id.</strong> Each confirmed write carries a server-generated id used as the upstream idempotency key, so retries and double-clicks execute once.</li>
+</ol>
+
+<h2>Informed confirmation</h2>
+<p>The confirmation must show what will actually happen, in plain language, with the resolved values:</p>
+<pre><code>Submit leave request?
+  Type:      Annual leave
+  Dates:     Thu 6 Nov – Fri 7 Nov 2026 (2 days)
+  Approver:  Sara Lopez (Engineering)
+  [Confirm]  [Edit]  [Cancel]</code></pre>
+<p>A fingerprint of these values travels with the confirmation. If anything changes before submission, the fingerprint no longer matches and the user must confirm again. What they confirm is exactly what runs.</p>
+
+<h2>Destructive actions</h2>
+<p>For cancellations, deletions and anything hard to reverse, add friction proportional to the risk: a distinct visual style, a clear statement that it cannot be undone and, for the most serious actions, typing a word or re-authenticating. Do not offer these actions at all through the assistant until there is a clear user need.</p>
+
+<h2>What the assistant says afterwards</h2>
+<p>Report only what the upstream confirmed: "Submitted. Request #5531 is pending approval." Never "Done!" before the response arrives, and never a success message when the upstream returned an error.</p>
+
+<h2>Tests</h2>
+<p>For each write capability: confirm executes once; cancel executes never; double confirm executes once; stale fingerprint is rejected; free text supersedes the confirmation with no write; and a prompt-injection attempt asking to "skip confirmation" still produces a confirmation. Tag these <code>write</code> and <code>safety</code> and require them to pass for every release.</p>

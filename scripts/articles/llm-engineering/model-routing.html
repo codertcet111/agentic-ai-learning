@@ -1,0 +1,28 @@
+<!-- desc: Decide when to use small versus large language models in an agent: route by purpose, measure with traces, escalate on low confidence and evaluate each tier on its own tasks. -->
+<p>Using the largest available model for every call is simple and expensive. Using the smallest for everything is cheap and fragile. Most agents do best with a mix, chosen by what each call is for.</p>
+
+<h2>Route by purpose</h2>
+<table>
+  <thead><tr><th>Purpose</th><th>Typical tier</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Routing between agents</td><td>Small</td><td>Short input, a few labels, easy to evaluate</td></tr>
+    <tr><td>Recipe miss classification</td><td>Small</td><td>Simple decision</td></tr>
+    <tr><td>Argument filling from clear text</td><td>Small or medium</td><td>Mostly extraction</td></tr>
+    <tr><td>Planning with many tools or ambiguity</td><td>Large</td><td>Accuracy here drives everything downstream</td></tr>
+    <tr><td>Composing nuanced or bilingual answers</td><td>Medium or large</td><td>Quality is visible to users</td></tr>
+    <tr><td>Conversation summaries</td><td>Small</td><td>Runs in the background, low stakes</td></tr>
+  </tbody>
+</table>
+<p>Map each purpose to a gateway alias (<a href="litellm-gateway.html">LiteLLM as a single gateway</a>), so the tiering lives in configuration.</p>
+
+<h2>Escalation</h2>
+<p>A useful pattern is to let the small model try first and escalate when it is unsure. The router's schema includes a <code>confidence</code> field. Below a threshold, the same input goes to a larger model. Use this where most inputs are easy and a few are hard. Verify with evaluation that the confidence actually correlates with correctness for your model and task. Self-reported confidence is not always reliable.</p>
+
+<h2>Prove the split with traces</h2>
+<p>Tag every generation with its <code>purpose</code> and model. Then a grouped view shows how many calls and tokens each tier handles. If the large model still accounts for most of the cost, look at which purpose is driving it, which is usually planning, and work on shrinking that prompt before changing tiers.</p>
+
+<h2>Evaluate each tier on its own job</h2>
+<p>When you move a purpose to a smaller model, run the golden cases tagged for that purpose, not just the full suite. Routing accuracy, argument correctness and compose quality each have their own measures. A small model that is 99% accurate at routing may be fine. One that is 92% accurate at planning probably is not.</p>
+
+<h2>Revisit regularly</h2>
+<p>Model prices and capabilities change quickly. A task that needed a large model last year may run well on this year's small one. Re-evaluate your tiering every few months with the golden suite. That is the only way to know.</p>

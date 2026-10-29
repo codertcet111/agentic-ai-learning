@@ -1,0 +1,48 @@
+<!-- desc: Test observability code in AI agents: assert span names and attributes with in-memory exporters, verify masking removes personal data, and check no secrets reach traces. -->
+<p>Tracing and masking code is easy to forget in tests, and when it breaks, nobody notices until they need a trace during an incident, or until personal data turns up in a third-party tool. A small set of observability tests prevents both.</p>
+
+<h2>In-memory exporters</h2>
+<p>OpenTelemetry's SDK provides an <code>InMemorySpanExporter</code> that collects finished spans in a list instead of sending them anywhere. Use it in a fixture:</p>
+<pre><code>from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+@pytest.fixture
+def spans():
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(MaskingProcessor())          # your masking step
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    set_test_tracer_provider(provider)
+    yield exporter
+    exporter.clear()</code></pre>
+<p>If you use a vendor SDK directly, wrap it behind your own small tracing interface so tests can substitute an in-memory recorder in the same way.</p>
+
+<h2>Test the shape</h2>
+<pre><code>async def test_turn_produces_expected_span_tree(graph_env, spans):
+    await graph_env.run_turn("how many leave days do I have?")
+    names = [s.name for s in spans.get_finished_spans()]
+    assert names.count("agent.request") == 1
+    assert "capability.invoke" in names
+    llm = [s for s in spans.get_finished_spans() if s.name == "llm.call"]
+    assert all("purpose" in s.attributes for s in llm)</code></pre>
+<p>Keep these assertions about names and required attributes, not exact counts of every span, so harmless refactors do not break them.</p>
+
+<h2>Test masking</h2>
+<pre><code>async def test_personal_data_is_masked_in_exported_spans(graph_env, spans):
+    await graph_env.run_turn("email my manager at sara.lopez@example.com, phone +44 7700 900123")
+    exported = json.dumps([dict(s.attributes) for s in spans.get_finished_spans()])
+    assert "sara.lopez@example.com" not in exported
+    assert "7700 900123" not in exported</code></pre>
+
+<h2>Test that secrets never appear</h2>
+<pre><code>async def test_auth_token_never_reaches_spans_logs_or_checkpoints(graph_env, spans, caplog):
+    graph_env.ctx.forwarded_headers["Authorization"] = "Bearer test-secret-123"
+    await graph_env.run_turn("show my balance")
+    haystack = (json.dumps([dict(s.attributes) for s in spans.get_finished_spans()])
+                + caplog.text + graph_env.dump_checkpoints() + graph_env.dump_messages())
+    assert "test-secret-123" not in haystack</code></pre>
+<p>This one test covers the most damaging class of leaks. Keep it in the default suite so it runs on every change.</p>
+
+<h2>Test residual alerts</h2>
+<p>Feed a value that your masking patterns deliberately do not cover and assert that the residual detector raises an alert containing the kind of data but not the value itself.</p>

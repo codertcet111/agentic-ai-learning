@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mongo for AI | Agentic Field Notes</title>
+  <meta name="description" content="Schema patterns for chat, tools, eval artifacts, and knowledge metadata.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/data-patterns/">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/data-patterns/">
+  <meta property="og:title" content="Mongo for AI">
+  <meta property="og:description" content="Schema patterns for chat, tools, eval artifacts, and knowledge metadata.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Mongo for AI","description":"Schema patterns for chat, tools, eval artifacts, and knowledge metadata.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / Mongo for AI</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Mongo for AI</h1>
+        <p class="lead" itemprop="description">Schema patterns for chat, tools, eval artifacts, and knowledge metadata.</p>
+        
+      </header>
+      
+      <p>Schema patterns for chat, tools, eval artifacts, and knowledge metadata.</p><ul class="step-list"><li><a href="chat-schema.html"><span class="step-num">01</span><span><strong>Chat message schema</strong><br><small>A MongoDB schema for AI chat messages: append-only documents, sequence ordering, structured content blocks, tool-call links and the indexes that make it fast.</small></span></a></li><li><a href="interaction-schema.html"><span class="step-num">02</span><span><strong>Interaction and form schema</strong><br><small>A MongoDB schema for pending forms, confirmations and choices in an agent workflow, with JSON Schema validation, revisions, fingerprints, expiry and status indexes.</small></span></a></li><li><a href="usage-metering.html"><span class="step-num">03</span><span><strong>Usage counters and quotas</strong><br><small>Track LLM tokens, model costs and tool invocations per tenant and day in MongoDB with atomic upserts, for dashboards and quotas, plus how to reconcile against provider billing.</small></span></a></li><li><a href="failure-records.html"><span class="step-num">04</span><span><strong>Failure records for support</strong><br><small>Persist sanitized failure records for agent turns in MongoDB with stable error classes, correlation ids and safe context, so support can resolve issues without raw logs.</small></span></a></li><li><a href="vector-metadata.html"><span class="step-num">05</span><span><strong>Vector metadata alongside Mongo</strong><br><small>Keep chunk metadata such as source, ACL scope, versions and embedding model in MongoDB alongside a vector store, so RAG retrieval is filterable, auditable and re-indexable.</small></span></a></li><li><a href="turn-ledger-dev.html"><span class="step-num">06</span><span><strong>Turn ledger for developers</strong><br><small>A developer&#x27;s guide to the turn ledger: states, transitions, idempotent replays, stuck-turn sweeps and the queries to run when a chat turn hangs or duplicates.</small></span></a></li><li><a href="idempotency-patterns.html"><span class="step-num">07</span><span><strong>Idempotency keys in chat APIs</strong><br><small>Idempotency patterns for chat and agent APIs: client keys on messages, partial unique indexes, replaying stored results and operation ids that protect upstream writes.</small></span></a></li></ul>
+      
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

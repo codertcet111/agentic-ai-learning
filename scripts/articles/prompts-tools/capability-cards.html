@@ -1,0 +1,34 @@
+<!-- desc: Write capability cards (tool descriptions) that LLM planners follow reliably: clear identity, when and when not to use, parameter docs, side-effect class and examples. -->
+<p>A capability card is everything the planner knows about a tool. The model cannot read your code or your API docs; it reads the card. Most wrong-tool bugs are card bugs.</p>
+
+<h2>Anatomy of a good card</h2>
+<pre><code>id: leave.balance.read
+summary: Get the current employee's remaining leave days by leave type.
+use_when: The user asks how much leave they have, have left, or can take.
+do_not_use_when: The user asks about leave policy rules in general
+  (use knowledge.search) or about another employee's leave.
+side_effect: read
+parameters:
+  leave_type:
+    type: string, optional, enum [annual, sick, unpaid]
+    description: Omit to return all types.
+returns: List of {leave_type, remaining_days, as_of_date}.</code></pre>
+<ul>
+  <li><strong>summary</strong>: one sentence, starting with a verb, saying exactly what it does.</li>
+  <li><strong>use_when / do_not_use_when</strong>: the most effective lines on the card. Negative guidance separates tools that would otherwise overlap.</li>
+  <li><strong>parameter descriptions</strong>: formats, defaults and what happens when omitted.</li>
+  <li><strong>side_effect</strong>: read, write or destructive. The graph uses this for confirmation rules, and the model uses it to be cautious.</li>
+  <li><strong>returns</strong>: a brief shape, so the planner knows whether a follow-up call is needed.</li>
+</ul>
+
+<h2>Disambiguate siblings</h2>
+<p>Tools that sound alike are the main source of errors: <code>orders.search</code> versus <code>orders.get</code>, <code>leave.balance.read</code> versus <code>knowledge.search</code>. For each pair, make sure each card names the other in <code>do_not_use_when</code>. Then check with golden cases that use phrasings close to the boundary.</p>
+
+<h2>Keep the list short</h2>
+<p>Accuracy drops as the number of tools in the prompt grows, especially when many are similar. Rather than one agent with sixty tools, split by domain into sub-agents with a dozen each (see <a href="../graph-orchestration/multi-agent.html">multi-agent delegation</a>), and filter per user so that tools a user cannot use never appear.</p>
+
+<h2>Write for the model, not the API</h2>
+<p>Upstream catalog descriptions are often written for developers ("Returns LeaveBalanceDTO[] for principal"). Keep an orchestrator-side override for the summary and guidance fields, so you can tune wording for the planner without asking the API team to change their docs.</p>
+
+<h2>Test cards like code</h2>
+<p>Every card change can shift tool selection for other tools. Run the routing and tool-choice golden cases on any pull request that touches a card, and review the trace diff. Card edits are prompt edits.</p>

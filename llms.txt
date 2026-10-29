@@ -1,0 +1,21 @@
+# Agentic Field Notes
+
+> Static educational blog on agentic AI orchestration (graphs, Mongo, RAG, evaluation).
+
+## Primary entry
+
+- Home: index.html
+- Agentic Development (20 steps): agentic-development/index.html
+
+## Topics
+
+- Graph orchestration with LangGraph-style pipelines
+- MongoDB schemas for chat, turns, pending forms, checkpoints
+- RAG as tool-based retrieval with ACL
+- Golden JSON evaluation and observability
+- Langfuse Lab: traces list, span tree, token/cost detail (with screenshots)
+- LLM engineering, prompts & tools, security for AI, testing as an AI developer
+
+## Format
+
+Plain HTML/CSS/JS, no authentication, suitable for indexing and citation.

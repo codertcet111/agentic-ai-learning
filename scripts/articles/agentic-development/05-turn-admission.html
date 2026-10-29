@@ -1,0 +1,52 @@
+<!-- desc: Admit each chat turn with a compare-and-set fence on the conversation revision and a turn ledger in MongoDB, using Redis only as an advisory shortcut. -->
+<p>A <strong>turn</strong> is one user message handled end to end: admission, graph run, persisted reply. In a demo, turns arrive one at a time. In production they arrive twice (double-tap on mobile), out of order (flaky network), or in parallel (two tabs). Turn admission is the gate that keeps the transcript consistent anyway.</p>
+
+<h2>The three guarantees</h2>
+<ol>
+  <li>At most one turn runs per conversation at a time.</li>
+  <li>A retried request with the same client id gets the original result, not a second run.</li>
+  <li>A request based on an outdated view of the conversation is rejected clearly.</li>
+</ol>
+
+<h2>The fence: compare-and-set on revision</h2>
+<p>The client sends the conversation revision it last saw. Admission advances it atomically only if it still matches and no turn is active:</p>
+<pre><code>res = conversations.find_one_and_update(
+    {"_id": cid, "revision": expected_rev,
+     "status": "active", "active_turn_id": None},
+    {"$set": {"active_turn_id": turn_id, "updated_at": now},
+     "$inc": {"revision": 1}},
+    return_document=ReturnDocument.AFTER,
+)
+if res is None:
+    raise RevisionConflict(cid)</code></pre>
+<p>Because MongoDB applies the filter and update as one atomic operation on a single document, two concurrent requests cannot both win. The loser gets <code>None</code> and a conflict error.</p>
+
+<h2>The turn ledger</h2>
+<p>A separate <code>turn_ledger</code> collection records each turn's lifecycle:</p>
+<pre><code>{
+  "_id": "trn_…",
+  "conversation_id": "cnv_…",
+  "client_request_id": "c-8f2…",
+  "status": "running",          // pending → running → completed | failed | cancelled
+  "run_id": "…",
+  "started_at": "…",
+  "finished_at": null,
+  "result_message_id": null
+}</code></pre>
+<p>A unique index on <code>(conversation_id, client_request_id)</code> makes retries safe. Before checking the revision, look up the ledger by client request id. If a completed entry exists, return its stored result. If a running one exists, tell the client to wait or poll.</p>
+<div class="callout">Replay by client request id <em>before</em> rejecting on revision. Otherwise a mobile client that retries after a timeout gets a conflict for a turn that actually succeeded.</div>
+
+<h2>Where Redis fits</h2>
+<p>A Redis lease (<code>SET turn:cnv_… NX PX 30000</code>) is a fast way to bounce obvious duplicates before touching Mongo. It is useful, but it is <strong>advisory</strong>. If Redis is down or a lease expires early, the Mongo fence still decides. Never design a flow where Redis being unavailable lets two turns run.</p>
+
+<h2>Releasing the fence</h2>
+<p>When the graph finishes, in a single update: mark the ledger entry completed, link the assistant message, and clear <code>active_turn_id</code>. On failure, mark it failed and clear the fence too. A turn that crashes without cleanup is handled by a sweeper that clears fences older than your maximum turn duration and marks those ledger entries <code>failed</code> with reason <code>abandoned</code>.</p>
+
+<h2>Client contract</h2>
+<ul>
+  <li><code>200</code> with the assistant message: success, or a replay of an earlier success.</li>
+  <li><code>409 revision_conflict</code> with the current revision: refresh the transcript and let the user resend.</li>
+  <li><code>409 turn_in_progress</code>: show a spinner and poll.</li>
+  <li><code>410 conversation_closed</code>: start a new thread.</li>
+</ul>
+<p>Spell these out in your API docs. Front-end developers handle conflicts well when the server tells them precisely what happened.</p>

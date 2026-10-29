@@ -1,0 +1,56 @@
+<!-- desc: Route every model call through one gateway such as LiteLLM: model aliases in config, central timeouts and retries, fallbacks, token accounting and provider portability. -->
+<p>Early prototypes call a model SDK directly from wherever it is needed. Six months later there are four SDKs, three retry implementations and model ids hard-coded in a dozen files. A single gateway prevents that. LiteLLM is a popular open-source choice: it exposes one OpenAI-style interface over many providers (OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, Google Vertex AI and others) and can run as a Python library or as a proxy server.</p>
+
+<h2>What the gateway owns</h2>
+<ul>
+  <li><strong>Model aliases</strong>: code asks for <code>planner</code> or <code>composer</code>, and configuration maps that to a provider and model id.</li>
+  <li><strong>Timeouts and retries</strong>: one policy, tuned per alias.</li>
+  <li><strong>Fallbacks</strong>: if the primary deployment is rate-limited or down, try a secondary.</li>
+  <li><strong>Accounting</strong>: token usage and cost for every call, sent to tracing.</li>
+  <li><strong>Structured output plumbing</strong>: passing response schemas in whatever form each provider expects.</li>
+</ul>
+
+<h2>Aliases in configuration</h2>
+<pre><code># models.yaml
+planner:
+  model: anthropic/claude-sonnet-x       # illustrative ids; use your provider's
+  timeout_s: 20
+  max_output_tokens: 600
+  fallbacks: [planner_backup]
+planner_backup:
+  model: bedrock/claude-sonnet-x
+  timeout_s: 20
+composer:
+  model: openai/gpt-x-mini
+  timeout_s: 25
+  max_output_tokens: 900
+router:
+  model: openai/gpt-x-nano
+  timeout_s: 8
+  max_output_tokens: 80</code></pre>
+<p>Graph nodes never mention a provider. Moving the planner to a different model is a configuration change and an evaluation run, not a code change.</p>
+
+<h2>A thin wrapper in your code</h2>
+<pre><code>class LLMGateway:
+    async def complete(self, alias: str, messages: list[dict],
+                       *, schema: type[BaseModel] | None, purpose: str,
+                       ctx: RequestContext) -&gt; LLMResult:
+        cfg = self.models[alias]
+        with tracer.generation(name="llm.call", purpose=purpose, model=cfg.model) as gen:
+            resp = await litellm.acompletion(
+                model=cfg.model, messages=messages,
+                timeout=cfg.timeout_s, max_tokens=cfg.max_output_tokens,
+                response_format=schema_format(schema),
+            )
+            gen.record_usage(resp.usage)
+            return LLMResult.from_response(resp)</code></pre>
+<p>Even with LiteLLM underneath, keep your own small interface. It is the seam where tracing, the stub LLM for tests and per-purpose policies plug in.</p>
+
+<h2>Library or proxy?</h2>
+<ul>
+  <li><strong>Library</strong>: simplest; runs inside your service.</li>
+  <li><strong>Proxy</strong>: one shared gateway for several services, with central keys, budgets and logging. Useful once more than one team calls models.</li>
+</ul>
+
+<h2>Roll out new models safely</h2>
+<p>Add the new model as a new alias, run the golden suite against it, compare traces and costs, then switch the alias per environment behind a flag. Keep the previous alias available for quick rollback.</p>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Span tree: cost and time per graph node | Agentic Field Notes</title>
+  <meta name="description" content="Read the Langfuse span tree to see time and cost per graph node, spot planner loops and slow tool calls, and explain why a particular chat turn was expensive.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/span-tree-and-nodes.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/span-tree-and-nodes.html">
+  <meta property="og:title" content="Span tree: cost and time per graph node">
+  <meta property="og:description" content="Read the Langfuse span tree to see time and cost per graph node, spot planner loops and slow tool calls, and explain why a particular chat turn was expensive.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Span tree: cost and time per graph node","description":"Read the Langfuse span tree to see time and cost per graph node, spot planner loops and slow tool calls, and explain why a particular chat turn was expensive.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Langfuse Lab</a> / Span tree: cost and time per graph node</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Span tree: cost and time per graph node</h1>
+        <p class="lead" itemprop="description">Read the Langfuse span tree to see time and cost per graph node, spot planner loops and slow tool calls, and explain why a particular chat turn was expensive.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="eval"></div>
+      <p>Open a trace and look at the <strong>tree view</strong>. Each row is an observation, and indentation shows parent and child. This is how you prove which <em>node</em> used the time or the budget.</p>
+<figure class="screenshot-figure">
+  <a href="../assets/images/langfuse/trace-span-tree.png" class="screenshot-link" target="_blank" rel="noopener noreferrer">
+    <img src="../assets/images/langfuse/trace-span-tree.png" alt="Langfuse span tree with nested LLM and tool observations" loading="lazy" decoding="async" width="1280" height="720">
+  </a>
+  <figcaption>Screenshot of a single trace expanded into a hierarchical span tree with per-node timing.</figcaption>
+</figure>
+<h2>Reading the tree</h2>
+<ul>
+  <li><strong>Root</strong>: usually named like <code>chat-turn</code>. Its duration and total cost should match what the traces list showed.</li>
+  <li><strong>Router</strong>: <code>route-request</code> or the direct-recipe path. If this is slow or expensive, the routing prompt or catalog has grown.</li>
+  <li><strong>Agent steps</strong>: one observation per graph step. Their children are the LLM and tool calls that step made.</li>
+  <li><strong>Generations</strong>: each LLM call shows its token counts and cost. Several planner generations in one turn usually mean ambiguous input or missing lookup results.</li>
+  <li><strong>Tool spans</strong>: <code>capability.invoke</code> latency separates network or upstream slowness from model slowness.</li>
+</ul>
+
+<h2>A worked example</h2>
+<pre><code>chat-turn                         4.9 s   $0.031
+├── route-request                 0.4 s   $0.001
+├── plan                          1.3 s   $0.011
+├── invoke employees.search       0.3 s
+├── plan                          1.4 s   $0.012   ← second planning pass
+├── request_input (choice)        0.0 s
+└── compose                       1.5 s   $0.007</code></pre>
+<p>The user said "approver Sara". Two employees matched, so the planner ran a second time with both candidates and asked the user to choose. This is correct behaviour, and the tree shows exactly what it cost. If the second plan happened on <em>every</em> approver request, you would consider adding the user's manager to the lookup query, so that one match is usually found directly.</p>
+
+<h2>Why per-node cost matters</h2>
+<p>When product asks "why is this chat expensive?", you expand the tree, compare children by cost, and point to the specific planner and compose pair, or an extra retrieval call. That leads to targeted fixes, such as caching the catalog, shrinking the tool list or adding a direct recipe, instead of a blanket model downgrade that hurts quality everywhere.</p>
+
+<h2>Timeline view</h2>
+<p>Langfuse can also show observations on a timeline. Use it to spot sequential calls that could run in parallel. Two independent read capabilities called one after another are an easy latency win.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="traces-list-and-errors.html">← Traces list: spot failures and slow turns</a><a href="trace-detail-io-and-tokens.html">Trace detail: IO, tokens, and model metadata →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Span tree</dt><dd>Hierarchical view of observations ordered by execution time.</dd><dt>Generation observation</dt><dd>Langfuse type for an LLM call with input/output token counts.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

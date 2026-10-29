@@ -1,0 +1,52 @@
+<!-- desc: Track LLM tokens, model costs and tool invocations per tenant and day in MongoDB with atomic upserts, for dashboards and quotas, plus how to reconcile against provider billing. -->
+<p>"How much is the assistant costing us, and who is using it?" Someone will ask this within a month of launch. Usage metering answers it, and also powers quotas that stop one tenant's runaway script from consuming everyone's budget.</p>
+
+<h2>Daily counter documents</h2>
+<pre><code>{
+  "_id": "acme:2026-10-29",
+  "tenant_id": "acme",
+  "day": "2026-10-29",
+  "turns": 1840,
+  "llm_calls": 5210,
+  "input_tokens": 9_412_330,
+  "output_tokens": 611_204,
+  "cost_usd_estimate": 31.42,
+  "by_model": {
+    "small-model": {"calls": 3100, "in": 2_100_000, "out": 120_000},
+    "large-model": {"calls": 2110, "in": 7_312_330, "out": 491_204}
+  },
+  "by_capability": {"leave.balance.read": 610, "knowledge.search": 402},
+  "updated_at": ISODate("…")
+}</code></pre>
+
+<h2>Atomic upserts</h2>
+<p>Increment counters at the end of each turn with one upsert. No read-modify-write and no locks:</p>
+<pre><code>db.usage_daily.update_one(
+    {"_id": f"{tenant}:{day}"},
+    {"$inc": {
+        "turns": 1,
+        "llm_calls": calls,
+        "input_tokens": tin,
+        "output_tokens": tout,
+        "cost_usd_estimate": cost,
+        f"by_model.{model}.calls": calls,
+        f"by_capability.{cap_key}": 1,
+     },
+     "$setOnInsert": {"tenant_id": tenant, "day": day},
+     "$set": {"updated_at": now}},
+    upsert=True)</code></pre>
+<p>Capability ids contain dots, which MongoDB interprets as path separators. Encode them (for example replace <code>.</code> with <code>__</code>) before using them as field names.</p>
+
+<h2>Per-principal counters for quotas</h2>
+<p>Daily tenant totals suit dashboards. Quotas need finer granularity: per principal per day, checked during turn admission. Store those in a separate collection with a TTL of a few days. For per-minute rate limits, use Redis (see <a href="../agentic-development/steps/17-redis-cache-patterns.html">step 17</a>).</p>
+
+<h2>Estimates are not invoices</h2>
+<p>The cost figure is an estimate computed from your configured prices. Prices change, cached tokens are billed differently, retries add calls you may not count, and providers round differently. Use the counters for trends and limits. For billing customers, reconcile against the provider's usage exports every month, and keep the price table versioned so you can explain historical figures.</p>
+
+<h2>What to chart</h2>
+<ul>
+  <li>Tokens per turn over time. A step change means a prompt or catalog got bigger.</li>
+  <li>LLM calls per turn. Rising values mean more replanning.</li>
+  <li>Share of large-model calls. This checks your <a href="../llm-engineering/model-routing.html">model routing</a>.</li>
+  <li>Top capabilities by tenant. This shows what users actually do with the assistant.</li>
+</ul>

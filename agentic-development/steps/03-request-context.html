@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 3 — Keep auth in request context, not graph state | Agentic Field Notes</title>
+  <meta name="description" content="Keep auth tokens, cookies and forwarding identifiers in per-request context instead of graph state, so they never reach checkpoints, logs, traces or the model.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/03-request-context.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/03-request-context.html">
+  <meta property="og:title" content="Step 3 — Keep auth in request context, not graph state">
+  <meta property="og:description" content="Keep auth tokens, cookies and forwarding identifiers in per-request context instead of graph state, so they never reach checkpoints, logs, traces or the model.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 3 — Keep auth in request context, not graph state","description":"Keep auth tokens, cookies and forwarding identifiers in per-request context instead of graph state, so they never reach checkpoints, logs, traces or the model.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 3</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 3 — Keep auth in request context, not graph state</h1>
+        <p class="lead" itemprop="description">Keep auth tokens, cookies and forwarding identifiers in per-request context instead of graph state, so they never reach checkpoints, logs, traces or the model.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>LangGraph and similar frameworks persist graph state between nodes and across pauses. That is what makes resumable workflows possible. It also means that anything you put in state can end up in a database document, a trace export or a debug log. Credentials must never be there.</p>
+
+<h2>Two kinds of data in a run</h2>
+<ul>
+  <li><strong>Graph state</strong>: what the workflow is doing. The current plan, resolved arguments, tool results by reference, the pending form id. Safe to checkpoint and inspect.</li>
+  <li><strong>Request context</strong>: who is asking and how to call upstream on their behalf. Access token, tenant id, locale, correlation id. Rebuilt on every request, never persisted.</li>
+</ul>
+<p>In LangGraph the natural home for the second kind is the run configuration, for example <code>config["configurable"]["request_context"]</code>. Nodes and providers read it; the checkpointer does not save it.</p>
+
+<h2>A minimal request context</h2>
+<pre><code>from dataclasses import dataclass, field
+
+@dataclass(frozen=True)
+class RequestContext:
+    request_id: str
+    tenant_id: str
+    locale: str
+    forwarded_headers: dict[str, str] = field(repr=False)
+
+    def redacted(self) -&gt; dict:
+        return {"request_id": self.request_id,
+                "tenant_id": self.tenant_id,
+                "locale": self.locale}</code></pre>
+<p>Note <code>repr=False</code> on the headers. A stray <code>print(ctx)</code> or a logged exception will not leak the token. The <code>redacted()</code> helper is what goes into logs and trace metadata.</p>
+
+<h2>Building it in middleware</h2>
+<pre><code>@app.middleware("http")
+async def attach_context(request, call_next):
+    ctx = RequestContext(
+        request_id=request.headers.get("x-request-id") or new_id(),
+        tenant_id=resolve_tenant(request),
+        locale=request.headers.get("accept-language", "en")[:2],
+        forwarded_headers={"Authorization": request.headers["authorization"]},
+    )
+    request.state.ctx = ctx
+    return await call_next(request)</code></pre>
+<p>The service layer passes <code>ctx</code> into the graph config when it starts a run. Providers read <code>forwarded_headers</code> when they build each outbound request.</p>
+
+<h2>Shared HTTP clients and cookies</h2>
+<p>For performance you will share one HTTP client across requests. That client must not keep a cookie jar. If an upstream sets a session cookie for user A and the pooled client stores it, user B's next request may carry it. Disable cookie persistence on the shared client and attach auth explicitly on each call.</p>
+
+<h2>Redaction at every exit</h2>
+<p>There are four common exits where secrets leak: application logs, error trackers such as Sentry or Rollbar, LLM observability tools, and database documents. Put one redaction helper in front of each:</p>
+<ul>
+  <li>Log formatters drop known header names and anything matching token patterns.</li>
+  <li>Error tracker hooks scrub request headers and local variables.</li>
+  <li>Trace exporters run a masking pass before upload (see the Langfuse Lab section).</li>
+  <li>Repositories accept typed models that simply have no field for credentials.</li>
+</ul>
+
+<div class="callout">Being able to see a tool is not the same as being allowed to call it. Check permissions when the tool is called, and let the upstream API check again.</div>
+
+<h2>A test that should always pass</h2>
+<p>Write one test that runs a full graph turn with a fake token such as <code>Bearer test-secret-123</code>, then serialises every checkpoint, every persisted message and every captured span and asserts the string <code>test-secret-123</code> appears in none of them. It is cheap to write, and it catches the day someone adds <code>headers</code> to graph state "just for debugging".</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Grep your codebase for token strings in GraphState or checkpoint tests—should return zero hits.</div><p class="meta"><a href="02-layered-architecture.html">← Previous</a> · <a href="04-sessions-conversations.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Request context</dt><dd>Per-request struct with correlation id, locale, org scope, and forwarded auth.</dd><dt>Checkpoint</dt><dd>Persisted graph snapshot used to resume or audit a workflow.</dd><dt>Redaction</dt><dd>Removing secrets and PII from structures before logging or exporting traces.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

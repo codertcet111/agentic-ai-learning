@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat message schema | Agentic Field Notes</title>
+  <meta name="description" content="A MongoDB schema for AI chat messages: append-only documents, sequence ordering, structured content blocks, tool-call links and the indexes that make it fast.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/data-patterns/chat-schema.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/data-patterns/chat-schema.html">
+  <meta property="og:title" content="Chat message schema">
+  <meta property="og:description" content="A MongoDB schema for AI chat messages: append-only documents, sequence ordering, structured content blocks, tool-call links and the indexes that make it fast.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Chat message schema","description":"A MongoDB schema for AI chat messages: append-only documents, sequence ordering, structured content blocks, tool-call links and the indexes that make it fast.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Mongo for AI</a> / Chat message schema</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Chat message schema</h1>
+        <p class="lead" itemprop="description">A MongoDB schema for AI chat messages: append-only documents, sequence ordering, structured content blocks, tool-call links and the indexes that make it fast.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="data"></div>
+      <p>Chat looks like the simplest data in an AI product. It is also the data you will query in more ways than you expect: rendering the UI, building LLM context, support investigations, analytics, deletion requests. This article gives a schema that serves all of them.</p>
+
+<h2>The message document</h2>
+<pre><code>{
+  "_id": ObjectId("…"),
+  "conversation_id": "cnv_19b2",
+  "tenant_id": "acme",
+  "sequence": 42,
+  "role": "assistant",
+  "turn_id": "trn_88",
+  "agent_id": "hr_assistant",
+  "locale": "en",
+  "content": {
+    "text": "Your request for 6–7 November has been submitted.",
+    "blocks": [{"type": "card", "title": "Leave request #5531", "status": "pending"}]
+  },
+  "tool_calls": [
+    {"id": "tc_1", "capability": "leave.request.create",
+     "status": "ok", "step_result_id": "sr_904"}
+  ],
+  "usage": {"input_tokens": 3120, "output_tokens": 210, "llm_calls": 3},
+  "created_at": ISODate("2026-10-29T10:41:07Z"),
+  "redacted": false
+}</code></pre>
+
+<h2>Field choices explained</h2>
+<ul>
+  <li><strong>tenant_id on every message.</strong> It is redundant with the conversation, but it means every query and every index can be scoped by tenant without a join, and a missing tenant filter is easy to spot in review.</li>
+  <li><strong>sequence, not created_at, for ordering.</strong> Server clocks differ; sequences do not.</li>
+  <li><strong>content.text and content.blocks.</strong> Text is always present for accessibility, notifications and LLM context. Blocks are optional rich UI.</li>
+  <li><strong>tool_calls with step_result_id.</strong> Auditors can see exactly what the assistant did and follow the link to the full result, without bloating the message.</li>
+  <li><strong>usage per assistant message.</strong> Cheap to record, very useful for cost questions by conversation.</li>
+</ul>
+
+<h2>Indexes</h2>
+<pre><code>{ conversation_id: 1, sequence: 1 }            unique   — render and context window
+{ conversation_id: 1, idempotency_key: 1 }     unique, partial — safe retries
+{ tenant_id: 1, created_at: -1 }                         — admin views, retention jobs
+{ "tool_calls.capability": 1, created_at: -1 }           — "who used this tool?"</code></pre>
+<p>Add the last one only if you actually run that query. Multikey indexes on arrays are useful but not free.</p>
+
+<h2>Common queries</h2>
+<pre><code>// Render the latest 50 messages
+db.messages.find({conversation_id: cid}).sort({sequence: -1}).limit(50)
+
+// Incremental sync from the client
+db.messages.find({conversation_id: cid, sequence: {$gt: lastSeen}}).sort({sequence: 1})
+
+// Context window for turn N (everything before it)
+db.messages.find({conversation_id: cid, sequence: {$lt: turnStartSeq}})
+           .sort({sequence: -1}).limit(20)</code></pre>
+
+<h2>Redaction and deletion</h2>
+<p>For a user's deletion request, a background job sets <code>content</code> to a placeholder, empties tool-call arguments and sets <code>redacted: true</code>, keeping ids and sequence so other messages stay consistent. Deleting documents outright leaves gaps in sequences, which breaks clients that expect continuity. Coordinate with legal on which approach your obligations require.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="interaction-schema.html">Interaction and form schema →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Append-only</dt><dd>Storage pattern that only inserts new rows.</dd><dt>Tool call id</dt><dd>Correlation between assistant action and provider request.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

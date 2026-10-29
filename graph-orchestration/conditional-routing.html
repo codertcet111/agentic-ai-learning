@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conditional routing without side effects | Agentic Field Notes</title>
+  <meta name="description" content="Write LangGraph routing functions as pure selectors that read state and return the next node, so graph diagrams stay truthful and every edge is unit-testable.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/conditional-routing.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/conditional-routing.html">
+  <meta property="og:title" content="Conditional routing without side effects">
+  <meta property="og:description" content="Write LangGraph routing functions as pure selectors that read state and return the next node, so graph diagrams stay truthful and every edge is unit-testable.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Conditional routing without side effects","description":"Write LangGraph routing functions as pure selectors that read state and return the next node, so graph diagrams stay truthful and every edge is unit-testable.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Graph &amp; Orchestration</a> / Conditional routing without side effects</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Conditional routing without side effects</h1>
+        <p class="lead" itemprop="description">Write LangGraph routing functions as pure selectors that read state and return the next node, so graph diagrams stay truthful and every edge is unit-testable.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>In LangGraph, a conditional edge is a function that looks at the current state and returns the name of the next node. It is a small piece of code with a large effect: routers define the shape of every conversation. The single most useful rule for them is that they must be <strong>pure</strong>.</p>
+
+<h2>What "pure" means here</h2>
+<ul>
+  <li>A router reads state and returns a node name (or a list of names for fan-out).</li>
+  <li>It does not write state. Writing is what nodes are for.</li>
+  <li>It does not call the LLM, the database or any network service.</li>
+  <li>Given the same state, it always returns the same answer.</li>
+</ul>
+<pre><code>def after_invoke(state: GraphState) -&gt; Literal["plan", "compose", "fail"]:
+    if state.get("error") and state["error"]["class"] == "upstream_unavailable":
+        return "fail"
+    if state.get("planner_calls", 0) &gt;= MAX_PLANNER_CALLS:
+        return "compose"
+    return "plan"
+
+graph.add_conditional_edges("invoke", after_invoke,
+                            {"plan": "plan", "compose": "compose", "fail": "fail"})</code></pre>
+<p>Passing the explicit mapping as the third argument documents every possible destination. LangGraph's diagram output then shows the real edges, and a typo in a returned name fails at compile time rather than mid-conversation.</p>
+
+<h2>Why side effects in routers hurt</h2>
+<p>Suppose a router increments a retry counter "just to keep it simple". Three things break:</p>
+<ol>
+  <li><strong>Checkpoints miss it.</strong> State updates from a router are not recorded as a node step, so a resumed run sees a different counter from the original.</li>
+  <li><strong>Traces mislead.</strong> The span tree shows nodes. A decision that changed state between nodes is invisible.</li>
+  <li><strong>Tests get harder.</strong> A pure router is tested with a dictionary and one assert. A router with side effects needs fixtures and mocks.</li>
+</ol>
+<p>If routing needs a computed value, add a tiny node that computes and stores it, then route on the stored value.</p>
+
+<h2>Route on structured fields</h2>
+<p>Routers should branch on typed fields that a node already set, such as <code>plan.kind</code>, <code>error.class</code> or <code>pending_interaction_id</code>, never on free text. A router that searches the model's reply for the word "sorry" is a bug that has not happened yet.</p>
+
+<h2>Testing every edge</h2>
+<pre><code>@pytest.mark.parametrize("state,expected", [
+    ({"error": {"class": "upstream_unavailable"}}, "fail"),
+    ({"planner_calls": 12}, "compose"),
+    ({}, "plan"),
+])
+def test_after_invoke(state, expected):
+    assert after_invoke(state) == expected</code></pre>
+<p>These tests run in milliseconds and act as documentation. When product asks "what happens if the HR API is down?", the answer is a test name.</p>
+
+<h2>Fan-out</h2>
+<p>A router may return several node names to run branches in parallel, for example calling two read capabilities at once. Use this for genuinely independent reads, and make sure the state keys each branch writes either do not overlap or use reducers that merge safely.</p>
+
+<h2>Keep the graph readable</h2>
+<p>If a router has more than five or six outcomes, the decision probably belongs in a node, such as the planner, that writes a single <code>next_action</code> field. Routers stay simple when the hard thinking happens elsewhere.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="checkpointing.html">Checkpointing and recovery →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Routing function</dt><dd>Pure selector between graph nodes.</dd><dt>Edge</dt><dd>Named transition emitted by a router.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!-- desc: Resolve tool arguments by enriching context with lookups and replanning, rather than letting resolver code quietly choose entity ids on the model's behalf. -->
+<p>The planner says "create a leave request for next Friday, approver Sara". The capability needs <code>start_date</code>, <code>end_date</code> and <code>approver_id</code>. Argument resolution is the step that bridges the gap, and it is where agents most often make confident mistakes.</p>
+
+<h2>Three sources of argument values</h2>
+<ol>
+  <li><strong>User text and transcript</strong>: "next Friday", "the same dates as last time".</li>
+  <li><strong>Previous step results</strong>: an order id returned by a search two steps ago.</li>
+  <li><strong>Lookups</strong>: capabilities that turn a name into an id, such as <code>employees.search</code>.</li>
+</ol>
+
+<h2>Deterministic first</h2>
+<p>Anything that can be computed without a model should be. Relative dates are resolved in code using the user's timezone from request context, with a library like <code>dateparser</code> or your own rules, never by asking the LLM what day it is. Enum values are normalized with a mapping table. The LLM fills only what remains.</p>
+
+<h2>Lookups enrich; they do not choose</h2>
+<p>When a parameter needs an entity id, the resolver runs the lookup capability and appends the <em>whole</em> result to <code>lookup_trace</code>:</p>
+<pre><code>{"lookup": "employees.search", "query": "Sara",
+ "results": [
+   {"id": "emp_201", "name": "Sara Khan",  "dept": "Finance"},
+   {"id": "emp_388", "name": "Sara Lopez", "dept": "Engineering"}
+ ]}</code></pre>
+<p>Then the graph <strong>replans</strong>. With both candidates in front of it, the planner either picks one because the context makes it obvious (the user's manager is in Engineering), or returns <code>need_input</code> and the user picks from a list.</p>
+<div class="callout">Code review rule: no resolver may set an entity id that does not appear in <code>lookup_trace</code> or a previous step result. A resolver that takes <code>results[0]</code> is a bug, even when it usually works.</div>
+
+<h2>Why not let the resolver pick?</h2>
+<p>Because "usually" is the problem. With two Saras, picking the first sends a leave request to the wrong person and nobody notices until they ask why. Making ambiguity visible to the planner, and through it to the user, costs one extra LLM call. Silent mistakes cost much more.</p>
+
+<h2>Grounding writes</h2>
+<p>Before a write, run grounding checks in code against domain rules the orchestrator can verify cheaply: end date after start date, quantity positive, date inside the open payroll period. Grounding does not replace upstream validation. It catches obvious errors before the confirmation form, so users do not confirm something that is certain to fail.</p>
+
+<h2>Unresolved arguments become forms</h2>
+<p>If arguments remain unresolved after lookups, the resolver returns them in <code>unresolved</code>. The planner turns that into a pending form with the resolved values prefilled. The user sees "Approver: [choose]" next to the dates already filled in, which is both faster and more accurate than another round of chat.</p>

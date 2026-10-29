@@ -1,0 +1,48 @@
+<!-- desc: Use Redis for catalog caches, capability snapshots, rate limits and advisory locks with versioned, namespaced keys, explicit TTLs and graceful fallback when Redis is down. -->
+<p>Redis makes an orchestrator fast. It should never make it correct. Every pattern in this step follows one rule: if Redis disappears, the system gets slower, not wrong.</p>
+
+<h2>Key naming</h2>
+<p>Keys carry a version prefix, a purpose, a tenant and an entity id:</p>
+<pre><code>v3:catalog:merged:{hash}                 → merged catalog JSON
+v3:caps:{tenant}:{principal_id}           → allowed capability ids
+v3:lease:turn:{conversation_id}           → advisory turn lease
+v3:rl:{tenant}:{principal_id}:{minute}    → rate limit counter
+v3:lookup:{tenant}:{capability}:{qhash}   → short-lived lookup cache</code></pre>
+<p>The version prefix lets you change value formats by bumping <code>v3</code> to <code>v4</code> on deploy, with no flush and no mixed-format reads. Including the tenant in keys prevents a whole class of cross-tenant leaks caused by a missing argument.</p>
+
+<h2>TTL on everything</h2>
+<p>Every <code>SET</code> has an expiry, and the TTL is documented next to the key definition:</p>
+<table>
+  <thead><tr><th>Key</th><th>TTL</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>catalog:merged</td><td>24 h</td><td>Immutable by hash; TTL only reclaims memory</td></tr>
+    <tr><td>caps</td><td>5 min</td><td>Permission changes should take effect quickly</td></tr>
+    <tr><td>lease:turn</td><td>Max turn duration + margin</td><td>Must expire if a worker dies</td></tr>
+    <tr><td>rl</td><td>2 min</td><td>Fixed-window counter</td></tr>
+    <tr><td>lookup</td><td>30–120 s</td><td>Smooths repeated searches within a turn</td></tr>
+  </tbody>
+</table>
+<p>A key without a TTL is a memory leak waiting for a busy week.</p>
+
+<h2>Read-through with fallback</h2>
+<pre><code>async def get_catalog(hash_: str) -&gt; Catalog:
+    try:
+        raw = await redis.get(f"v3:catalog:merged:{hash_}")
+        if raw:
+            return Catalog.model_validate_json(raw)
+    except RedisError:
+        log.warning("redis_unavailable", op="catalog_get")
+    cat = await catalog_repo.get(hash_)                 # Mongo is the source
+    with suppress(RedisError):
+        await redis.set(f"v3:catalog:merged:{hash_}", cat.model_dump_json(), ex=86400)
+    return cat</code></pre>
+<p>Errors from Redis are logged and swallowed on reads. The fallback path is the real path.</p>
+
+<h2>Leases are advisory</h2>
+<p>The turn lease (<code>SET … NX PX</code>) bounces duplicate submissions early. MongoDB's compare-and-set on the conversation revision (step 5) is the real gate. If the lease is lost, two requests reach Mongo and one still loses. Never skip the Mongo check because the lease succeeded.</p>
+
+<h2>Rate limits</h2>
+<p>A simple fixed-window counter (<code>INCR</code> plus <code>EXPIRE</code> on first increment) per principal per minute is enough for most internal assistants. If Redis is down, choose deliberately: fail open (allow the request) for low-risk reads, or fall back to a coarse in-process limiter. Write that decision down.</p>
+
+<h2>Chaos test</h2>
+<p>Run your integration suite once with Redis stopped. Turns should still be admitted, catalogs loaded, and messages persisted, only slower. If anything fails, you have found a place where Redis became the source of truth by accident.</p>

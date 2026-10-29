@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 6 — Map Mongo collections to roles | Agentic Field Notes</title>
+  <meta name="description" content="A map of the MongoDB collections an orchestration service needs, what each one owns, and how to declare indexes once and create them at startup.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/06-mongo-collections-map.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/06-mongo-collections-map.html">
+  <meta property="og:title" content="Step 6 — Map Mongo collections to roles">
+  <meta property="og:description" content="A map of the MongoDB collections an orchestration service needs, what each one owns, and how to declare indexes once and create them at startup.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 6 — Map Mongo collections to roles","description":"A map of the MongoDB collections an orchestration service needs, what each one owns, and how to declare indexes once and create them at startup.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 6</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 6 — Map Mongo collections to roles</h1>
+        <p class="lead" itemprop="description">A map of the MongoDB collections an orchestration service needs, what each one owns, and how to declare indexes once and create them at startup.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>An orchestration service needs more storage than "a messages table". Each concern gets its own collection, so documents stay small, indexes stay targeted, and you can set a different retention policy per concern.</p>
+
+<h2>The collection map</h2>
+<table>
+  <thead><tr><th>Collection</th><th>Owns</th><th>Typical retention</th></tr></thead>
+  <tbody>
+    <tr><td><code>sessions</code></td><td>Principal, tenant, expiry, pinned catalog hash</td><td>Days (TTL)</td></tr>
+    <tr><td><code>conversations</code></td><td>Thread status, revision, limits, title</td><td>Months</td></tr>
+    <tr><td><code>messages</code></td><td>One document per message, ordered by sequence</td><td>Months, per policy</td></tr>
+    <tr><td><code>turn_ledger</code></td><td>Lifecycle of each turn, idempotency keys</td><td>Weeks</td></tr>
+    <tr><td><code>pending_interactions</code></td><td>Forms and confirmations waiting for the user</td><td>Hours to days</td></tr>
+    <tr><td><code>graph_checkpoints</code></td><td>Serialized graph state for resume</td><td>Short; delete when a turn completes</td></tr>
+    <tr><td><code>step_results</code></td><td>Large tool outputs stored by reference</td><td>Weeks</td></tr>
+    <tr><td><code>usage_counters</code></td><td>Tokens and invokes per tenant per day</td><td>Months</td></tr>
+    <tr><td><code>failure_records</code></td><td>Sanitized errors for support</td><td>Weeks</td></tr>
+    <tr><td><code>catalog_versions</code></td><td>Merged tool catalogs by hash</td><td>Until no session references them</td></tr>
+  </tbody>
+</table>
+
+<h2>One module for names and indexes</h2>
+<p>Declare every collection name and its indexes in a single module. Nothing else in the codebase hard-codes a collection string.</p>
+<pre><code>from pymongo import IndexModel, ASCENDING as A, DESCENDING as D
+
+MESSAGES = "messages"
+TURN_LEDGER = "turn_ledger"
+
+INDEX_SPECS = {
+    MESSAGES: [
+        IndexModel([("conversation_id", A), ("sequence", A)], unique=True),
+        IndexModel([("conversation_id", A), ("idempotency_key", A)],
+                   unique=True,
+                   partialFilterExpression={"idempotency_key": {"$type": "string"}}),
+    ],
+    TURN_LEDGER: [
+        IndexModel([("conversation_id", A), ("client_request_id", A)], unique=True),
+        IndexModel([("status", A), ("started_at", A)]),
+    ],
+}</code></pre>
+
+<h2>Create indexes at startup, not at import</h2>
+<p>Run <code>create_indexes</code> in the application's startup hook (FastAPI's lifespan, for example). Doing it at import time slows tests, fails when the database is unreachable, and runs once per worker process in unpredictable order. Index creation is idempotent, so running it on every boot is safe.</p>
+<pre><code>@asynccontextmanager
+async def lifespan(app):
+    db = connect()
+    for name, specs in INDEX_SPECS.items():
+        await db[name].create_indexes(specs)
+    yield
+    db.client.close()</code></pre>
+
+<h2>Partial unique indexes</h2>
+<p>The <code>idempotency_key</code> index above uses a partial filter so uniqueness applies only when the field is a string. System messages without a key do not collide with each other. Without the filter, every document missing the field would count as <code>null</code> and the second one would fail to insert.</p>
+
+<h2>TTL for short-lived data</h2>
+<p>Sessions, checkpoints and expired pending interactions are good TTL candidates. A TTL index on an <code>expires_at</code> field with <code>expireAfterSeconds: 0</code> lets MongoDB delete documents at the time you choose. The TTL monitor runs about once a minute, so do not rely on it for exact timing. Your code should still check <code>expires_at</code> on read.</p>
+
+<h2>Keep the map current</h2>
+<p>When someone adds a field that queries filter on, they add the index in the same pull request. Drift between the code's queries and the declared indexes shows up as slow queries under load, which is the most expensive time to find it.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Keep INDEX_SPECS as the single source of truth; drift between model and index causes silent prod failures.</div><p class="meta"><a href="05-turn-admission.html">← Previous</a> · <a href="07-messages-transcripts.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Partial index</dt><dd>Mongo index with a filter expression so uniqueness applies only to matching docs.</dd><dt>Lifespan bootstrap</dt><dd>FastAPI startup hook that opens clients and ensures indexes.</dd><dt>Step result</dt><dd>Persisted output of a graph step for debugging or UI replay.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkpointing and recovery | Agentic Field Notes</title>
+  <meta name="description" content="How LangGraph checkpoints work, how to persist them in MongoDB, how to resume after crashes or pauses, and how to keep checkpoint size and retention under control.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/checkpointing.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/checkpointing.html">
+  <meta property="og:title" content="Checkpointing and recovery">
+  <meta property="og:description" content="How LangGraph checkpoints work, how to persist them in MongoDB, how to resume after crashes or pauses, and how to keep checkpoint size and retention under control.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Checkpointing and recovery","description":"How LangGraph checkpoints work, how to persist them in MongoDB, how to resume after crashes or pauses, and how to keep checkpoint size and retention under control.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Graph &amp; Orchestration</a> / Checkpointing and recovery</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Checkpointing and recovery</h1>
+        <p class="lead" itemprop="description">How LangGraph checkpoints work, how to persist them in MongoDB, how to resume after crashes or pauses, and how to keep checkpoint size and retention under control.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>A checkpoint is a snapshot of graph state saved after each step. Checkpoints are what let a workflow pause for a form and continue an hour later, survive a pod restart in the middle of a turn, and be inspected after the fact. They are also a place where data piles up quietly if you are not careful.</p>
+
+<h2>How it works</h2>
+<p>When you compile a graph with a checkpointer and invoke it with a <code>thread_id</code>, LangGraph saves the state's channel values after each super-step under that thread. Invoking again with the same <code>thread_id</code> continues from the latest checkpoint rather than starting fresh.</p>
+<pre><code>from langgraph.checkpoint.mongodb import MongoDBSaver   # or the async variant
+
+checkpointer = MongoDBSaver(mongo_client, db_name="orchestrator")
+graph = builder.compile(checkpointer=checkpointer)
+
+config = {"configurable": {"thread_id": turn_id}}
+await graph.ainvoke(inputs, config)</code></pre>
+<p>Postgres, SQLite and Redis checkpointers exist too. Pick the store you already operate; checkpoint traffic is write-heavy but small.</p>
+
+<h2>Three uses</h2>
+<ol>
+  <li><strong>Pause and resume.</strong> A node creates a pending form and the run ends. When the form is submitted, the service invokes the graph with the same thread id and the resume input. LangGraph's <code>interrupt</code> and <code>Command(resume=…)</code> APIs support this pattern directly.</li>
+  <li><strong>Crash recovery.</strong> If the process dies after <code>invoke</code> but before <code>compose</code>, a recovery job can resume from the last checkpoint instead of re-running the write.</li>
+  <li><strong>Inspection.</strong> <code>graph.get_state(config)</code> and <code>get_state_history</code> show exactly what the graph knew at each step, which is invaluable when a trace is not enough.</li>
+</ol>
+
+<h2>Choosing thread ids</h2>
+<p>Thread id defines checkpoint lineage. Two sensible choices:</p>
+<ul>
+  <li><strong>Per turn</strong> (<code>thread_id = turn_id</code>): each turn starts clean, and conversation memory comes from the message store. Simple, small checkpoints, easy cleanup. This is the recommended default.</li>
+  <li><strong>Per conversation</strong>: state accumulates across turns. Convenient for prototypes, but checkpoints grow with every turn and old state can leak into new turns.</li>
+</ul>
+<p>For a form that spans turns, resume using the originating turn's thread id, which the pending interaction stores.</p>
+
+<h2>Keep checkpoints small</h2>
+<p>Every channel value is serialized on every step. A 200&nbsp;KB tool result in state means 200&nbsp;KB written several times per turn. Store large results in <code>step_results</code> and keep ids and summaries in state. See <a href="state-size.html">keeping GraphState small</a>.</p>
+
+<h2>Never checkpoint secrets</h2>
+<p>Anything in state is persisted. Tokens and headers belong in run config (<a href="../agentic-development/steps/03-request-context.html">step 3</a>), which is not saved. Add a test that serializes checkpoints and greps for a fake token.</p>
+
+<h2>Retention</h2>
+<p>Most checkpoints are useful for minutes, not months. Delete a turn's checkpoints when it completes successfully, keep failed ones for a few days for debugging, and keep paused ones until their pending interaction expires. A TTL index on a timestamp field, or a nightly cleanup job, keeps the collection from becoming your largest one by accident.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="conditional-routing.html">← Conditional routing without side effects</a><a href="multi-agent.html">Multi-agent delegation →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Channel</dt><dd>Named slice of graph state LangGraph merges.</dd><dt>Recovery</dt><dd>Resuming a run from persisted checkpoint data.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

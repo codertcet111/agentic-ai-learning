@@ -1,0 +1,47 @@
+<!-- desc: A MongoDB schema for pending forms, confirmations and choices in an agent workflow, with JSON Schema validation, revisions, fingerprints, expiry and status indexes. -->
+<p>Pending interactions are the paused moments of an agent conversation: a form waiting to be filled, a confirmation waiting for a click. They are short-lived, stateful and security-sensitive, which makes their schema worth getting right.</p>
+
+<h2>The document</h2>
+<pre><code>{
+  "_id": "pi_3c1",
+  "tenant_id": "acme",
+  "conversation_id": "cnv_19b2",
+  "origin_turn_id": "trn_87",
+  "thread_id": "trn_87",
+  "agent_id": "hr_assistant",
+  "kind": "form",                             // form | confirmation | choice
+  "status": "open",                           // open | submitted | superseded | expired | cancelled
+  "revision": 2,
+  "fingerprint": "sha256:9b…",
+  "capability_id": "leave.request.create",
+  "schema": { "type": "object", "required": ["approver_id"], "properties": { … } },
+  "ui": { "title": {"en": "Choose an approver", "ar": "اختر المعتمد"},
+          "submit_label": {"en": "Continue", "ar": "متابعة"} },
+  "prefill": {"start_date": "2026-11-06", "end_date": "2026-11-07"},
+  "options": [{"value": "emp_201", "label": "Sara Khan (Finance)"},
+              {"value": "emp_388", "label": "Sara Lopez (Engineering)"}],
+  "created_at": ISODate("…"),
+  "expires_at": ISODate("…"),
+  "resolved_at": null,
+  "resolution": null
+}</code></pre>
+
+<h2>Why JSON Schema</h2>
+<p>Storing a real JSON Schema means the same definition drives three things: client rendering (many form libraries render JSON Schema directly), server validation on submit (with a validator such as <code>jsonschema</code>) and the capability's own parameter schema, from which it is usually derived. One definition, no drift.</p>
+<p>Keep display concerns (titles, labels, order) in a separate <code>ui</code> object so the schema stays a pure validation contract.</p>
+
+<h2>Revision and fingerprint</h2>
+<ul>
+  <li><strong>revision</strong> increments whenever the server changes the form. Submissions must carry the current revision.</li>
+  <li><strong>fingerprint</strong> hashes the capability id and the arguments the user will be confirming. It guarantees that what was confirmed is what gets executed (see <a href="../graph-orchestration/human-in-the-loop.html">human-in-the-loop</a>).</li>
+</ul>
+
+<h2>One open interaction per conversation</h2>
+<p>Enforce it with a partial unique index:</p>
+<pre><code>{ conversation_id: 1 }  unique, partialFilterExpression: { status: "open" }
+{ status: 1, expires_at: 1 }                     — expiry sweeper
+{ tenant_id: 1, created_at: -1 }                 — admin views</code></pre>
+<p>Creating a new interaction first marks any open one as <code>superseded</code> within the same logical operation. The partial unique index guarantees you never end up with two open forms competing for the same conversation.</p>
+
+<h2>Resolution record</h2>
+<p>When an interaction closes, set <code>resolved_at</code> and a <code>resolution</code> object: who resolved it, the submitted values (or a redacted form of them), and the resulting turn id. Do not delete the document straight away. Resolved interactions answer support questions like "did I actually confirm that?" Keep them for a few weeks with a TTL on <code>resolved_at</code>.</p>

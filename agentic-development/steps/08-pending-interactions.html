@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 8 — Pending forms and exact resume | Agentic Field Notes</title>
+  <meta name="description" content="Pause agent workflows with durable pending interactions (forms and confirmations) and resume them only through a typed form submission matching id and revision.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/08-pending-interactions.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/08-pending-interactions.html">
+  <meta property="og:title" content="Step 8 — Pending forms and exact resume">
+  <meta property="og:description" content="Pause agent workflows with durable pending interactions (forms and confirmations) and resume them only through a typed form submission matching id and revision.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 8 — Pending forms and exact resume","description":"Pause agent workflows with durable pending interactions (forms and confirmations) and resume them only through a typed form submission matching id and revision.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 8</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 8 — Pending forms and exact resume</h1>
+        <p class="lead" itemprop="description">Pause agent workflows with durable pending interactions (forms and confirmations) and resume them only through a typed form submission matching id and revision.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>Real workflows need input in the middle. "Which manager should approve this?" "Confirm you want to cancel order #4412." A chat agent that handles these by just reading the next free-text message will eventually merge two unrelated intents. Pending interactions make the pause explicit.</p>
+
+<h2>The model</h2>
+<p>When a graph node needs structured input, it does not ask a question in plain text and hope. It creates a <strong>pending interaction</strong>:</p>
+<pre><code>{
+  "_id": "pi_…",
+  "conversation_id": "cnv_…",
+  "turn_id": "trn_…",
+  "kind": "form",                      // form | confirmation | choice
+  "revision": 1,
+  "status": "open",                    // open | submitted | superseded | expired
+  "schema": {
+    "type": "object",
+    "required": ["start_date", "end_date"],
+    "properties": {
+      "start_date": {"type": "string", "format": "date"},
+      "end_date":   {"type": "string", "format": "date"},
+      "note":       {"type": "string", "maxLength": 200}
+    }
+  },
+  "prefill": {"start_date": "2026-11-06"},
+  "expires_at": "…",
+  "resume_node": "submit_leave_request"
+}</code></pre>
+<p>The assistant message carries a block referencing <code>pi_…</code>, and the client renders a real form. The graph run ends, and the checkpoint records where to resume.</p>
+
+<h2>Resuming: only by form submission</h2>
+<p>The client resumes with a dedicated control message, not a chat message:</p>
+<pre><code>POST /conversations/cnv_…/turns
+{
+  "type": "form_submission",
+  "pending_interaction_id": "pi_…",
+  "revision": 1,
+  "values": {"start_date": "2026-11-06", "end_date": "2026-11-07"}
+}</code></pre>
+<p>The server checks that the interaction is open, that the revision matches, and that the values validate against the stored schema. Only then does it load the checkpoint and continue at <code>resume_node</code>.</p>
+
+<h2>Free text supersedes</h2>
+<p>Users ignore forms all the time. They type "actually, never mind, what's my balance?" while a leave form is open. That message must <strong>not</strong> be fed into the paused workflow. Instead:</p>
+<ol>
+  <li>Mark the open interaction <code>superseded</code>.</li>
+  <li>Discard its checkpoint.</li>
+  <li>Run the new message as a fresh turn.</li>
+</ol>
+<p>The client greys out the old form. If the user later wants it back, they ask again and get a new interaction with fresh prefill.</p>
+
+<h2>Revisions and stale UI</h2>
+<p>Sometimes the server changes a form while it is open, for example by narrowing date options after a policy check. Increment <code>revision</code> and send the update. A submission carrying the old revision is rejected with the new form attached, so a stale browser tab cannot submit values the server no longer accepts.</p>
+
+<h2>Expiry</h2>
+<p>Open interactions should not live forever. Set <code>expires_at</code> to something reasonable (an hour for confirmations, a day for longer forms). When one expires, append a short assistant message saying so. Silent expiry confuses users who come back the next morning and click Submit.</p>
+
+<div class="callout">Test this flow: open form → user sends free text → old form becomes superseded → new turn answers the free text → submitting the old form returns a clear error. Users do exactly this in production.</div>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Add an API test where free text supersedes a pending form—users always do this in prod.</div><p class="meta"><a href="07-messages-transcripts.html">← Previous</a> · <a href="09-capability-catalog.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Pending interaction</dt><dd>Durable pause point waiting for structured user input.</dd><dt>Supersede</dt><dd>Mark an old interaction inactive when a new user intent arrives.</dd><dt>Form submission</dt><dd>Control message that validates against the pending schema.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

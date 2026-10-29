@@ -1,0 +1,37 @@
+<!-- desc: Idempotency patterns for chat and agent APIs: client keys on messages, partial unique indexes, replaying stored results and operation ids that protect upstream writes. -->
+<p>Networks fail in the worst possible place: after the server did the work and before the client heard about it. The client retries. Without idempotency, the user gets two messages, two leave requests or two refunds. With it, the retry returns the first result.</p>
+
+<h2>Three layers of protection</h2>
+<table>
+  <thead><tr><th>Layer</th><th>Key</th><th>Protects against</th></tr></thead>
+  <tbody>
+    <tr><td>Message append</td><td>Client <code>idempotency_key</code></td><td>Duplicate user messages from retries or offline queues</td></tr>
+    <tr><td>Turn admission</td><td>Client <code>client_request_id</code></td><td>Running the graph twice for one request</td></tr>
+    <tr><td>Upstream write</td><td>Server <code>operation_id</code></td><td>Executing a domain write twice</td></tr>
+  </tbody>
+</table>
+<p>Each layer catches cases the others miss, so use all three.</p>
+
+<h2>Client keys</h2>
+<p>The client generates a UUID when the user presses Send and reuses it for every retry of that message. It must be generated once per user action, not once per HTTP attempt. Mobile apps that queue messages offline store the key with the queued message.</p>
+
+<h2>Partial unique indexes</h2>
+<pre><code>db.messages.createIndex(
+  {conversation_id: 1, idempotency_key: 1},
+  {unique: true,
+   partialFilterExpression: {idempotency_key: {$type: "string"}}})</code></pre>
+<p>The partial filter means messages without a key (system or assistant messages) are not checked for uniqueness. On a duplicate-key error, read the existing document and return it with a normal 200 response. The client should not be able to tell a replay from the original.</p>
+
+<h2>Replay the result, not just the acceptance</h2>
+<p>For turns, it is not enough to reject the duplicate. The client needs the answer. Store <code>result_message_id</code> on the ledger entry when the turn completes. A replayed request then:</p>
+<ul>
+  <li>finds a completed entry → returns that assistant message,</li>
+  <li>finds a running entry → returns <code>409 turn_in_progress</code> so the client polls,</li>
+  <li>finds a failed entry → returns the same error, so the user can choose to resend with a new key.</li>
+</ul>
+
+<h2>Operation ids for writes</h2>
+<p>Upstream writes use an <code>operation_id</code> built by the server from <code>turn_id</code> and step index, for example <code>trn_88:step_3</code>. Send it as an <code>Idempotency-Key</code> header. This protects against the orchestrator's own retries, and against a crash between invoking a write and recording that it happened. If the upstream API does not support idempotency keys, ask the owning team to add it before you expose that write to an agent. It is the most valuable change they can make for you.</p>
+
+<h2>Expiry</h2>
+<p>Idempotency records do not need to live forever. Twenty-four hours covers realistic retry windows. Messages keep their key for the life of the message, which is harmless. Upstream idempotency stores usually expire keys after a day or so, and that is fine.</p>

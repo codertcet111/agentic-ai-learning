@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agentic Development — 20 Steps | Agentic Field Notes</title>
+  <meta name="description" content="A twenty-page path to designing and shipping an agentic orchestration backend.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/">
+  <meta property="og:title" content="Agentic Development — 20 Steps">
+  <meta property="og:description" content="A twenty-page path to designing and shipping an agentic orchestration backend.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Agentic Development — 20 Steps","description":"A twenty-page path to designing and shipping an agentic orchestration backend.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / Agentic Development</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Agentic Development — 20 Steps</h1>
+        <p class="lead" itemprop="description">A twenty-page path to designing and shipping an agentic orchestration backend.</p>
+        
+      </header>
+      
+      
+<p>This tab is a twenty-step path from blank repo to production agentic backend. Examples stay generic—a fictional HR, billing, or inventory domain—so you can map the ideas to your stack.</p>
+<p>Steps reflect patterns used in modern orchestration services: Mongo for truth, Redis for cache, LangGraph for flow, LiteLLM for models, golden JSON for evals, and strict auth boundaries.</p>
+<ul class="step-list"><li><a href="steps/01-orchestration-plane.html"><span class="step-num">01</span><span>Step 1 — Draw the orchestration boundary</span></a></li><li><a href="steps/02-layered-architecture.html"><span class="step-num">02</span><span>Step 2 — Layer API, services, agents, providers</span></a></li><li><a href="steps/03-request-context.html"><span class="step-num">03</span><span>Step 3 — Keep auth in request context, not graph state</span></a></li><li><a href="steps/04-sessions-conversations.html"><span class="step-num">04</span><span>Step 4 — Model sessions and conversations</span></a></li><li><a href="steps/05-turn-admission.html"><span class="step-num">05</span><span>Step 5 — Admit turns with leases and fences</span></a></li><li><a href="steps/06-mongo-collections-map.html"><span class="step-num">06</span><span>Step 6 — Map Mongo collections to roles</span></a></li><li><a href="steps/07-messages-transcripts.html"><span class="step-num">07</span><span>Step 7 — Append messages, don&#x27;t mutate arrays</span></a></li><li><a href="steps/08-pending-interactions.html"><span class="step-num">08</span><span>Step 8 — Pending forms and exact resume</span></a></li><li><a href="steps/09-capability-catalog.html"><span class="step-num">09</span><span>Step 9 — Merge and pin the capability catalog</span></a></li><li><a href="steps/10-providers-invoke.html"><span class="step-num">10</span><span>Step 10 — Provider adapters and invoke</span></a></li><li><a href="steps/11-langgraph-skeleton.html"><span class="step-num">11</span><span>Step 11 — Wire LangGraph with a checkpointer</span></a></li><li><a href="steps/12-graph-nodes-flow.html"><span class="step-num">12</span><span>Step 12 — Walk the node pipeline</span></a></li><li><a href="steps/13-typed-llm-schemas.html"><span class="step-num">13</span><span>Step 13 — Typed Pydantic outputs for every LLM call</span></a></li><li><a href="steps/14-argument-resolution.html"><span class="step-num">14</span><span>Step 14 — Resolve arguments without smuggling ids</span></a></li><li><a href="steps/15-routing-recipes.html"><span class="step-num">15</span><span>Step 15 — Known commands before the model</span></a></li><li><a href="steps/16-presentation-modes.html"><span class="step-num">16</span><span>Step 16 — Presentation modes and bilingual compose</span></a></li><li><a href="steps/17-redis-cache-patterns.html"><span class="step-num">17</span><span>Step 17 — Redis for catalog, caps, and locks</span></a></li><li><a href="steps/18-observability-tracing.html"><span class="step-num">18</span><span>Step 18 — Trace requests, nodes, and LLM calls</span></a></li><li><a href="steps/19-rag-knowledge-hooks.html"><span class="step-num">19</span><span>Step 19 — Add RAG without breaking the graph</span></a></li><li><a href="steps/20-evaluation-golden-suite.html"><span class="step-num">20</span><span>Step 20 — Golden evals and regression gates</span></a></li></ul>
+
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Agentic backend</dt><dd>Service that orchestrates LLM turns, tools, and chat state.</dd><dt>Orchestration</dt><dd>Coordination of model calls and tools without owning business rules.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

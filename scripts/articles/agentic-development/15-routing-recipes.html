@@ -1,0 +1,43 @@
+<!-- desc: Handle known commands such as reset, help or show usage with exact-match recipes before the LLM runs, for predictable, cheap and auditable behaviour. -->
+<p>Not every message needs a model. "Reset conversation", "show my usage", "help", "talk to a human": these have one correct answer, and sending them through a planner adds cost, latency and a small chance of getting them wrong. <strong>Routing recipes</strong> handle them before the LLM runs.</p>
+
+<h2>What a recipe is</h2>
+<pre><code>RECIPES = [
+  Recipe(
+    id="reset_conversation",
+    aliases={"en": ["reset", "reset conversation", "start over", "clear chat"],
+             "ar": ["إعادة تعيين", "ابدأ من جديد", "مسح المحادثة"]},
+    handler=reset_conversation,
+  ),
+  Recipe(
+    id="show_usage",
+    aliases={"en": ["usage", "show usage", "my usage"],
+             "ar": ["الاستخدام", "عرض الاستخدام"]},
+    handler=show_usage,
+  ),
+]</code></pre>
+<p>A recipe has an id, a list of aliases per language, and a handler that returns a fixed or data-driven response. The handler is ordinary code and may call a capability, but it never calls the LLM.</p>
+
+<h2>Matching rules</h2>
+<ul>
+  <li>Normalize first: trim, lowercase, collapse whitespace, strip trailing punctuation, and normalize Arabic letter variants (alef forms, taa marbuta) and diacritics.</li>
+  <li>Match the <strong>whole message</strong> exactly against aliases. "Reset" matches; "how do I reset my password" does not.</li>
+  <li>No fuzzy matching. Near-misses go to the planner, which can handle them, and an exact list stays easy to audit.</li>
+</ul>
+
+<h2>Why bother</h2>
+<ul>
+  <li><strong>Reliability.</strong> Support scripts and onboarding demos say exact phrases. They should work identically every time.</li>
+  <li><strong>Cost.</strong> A meaningful share of messages in internal assistants are short commands. Serving them without a model call adds up.</li>
+  <li><strong>Security.</strong> Sensitive operations such as "delete my data" or "export my conversation" get one deterministic, reviewed path.</li>
+  <li><strong>Latency.</strong> Recipes reply in milliseconds.</li>
+</ul>
+
+<h2>Recipes in the graph</h2>
+<p><code>route_request</code> checks recipes first. On a match it sets <code>recipe_id</code> in state and routes to a recipe node that runs the handler and writes the response directly, with <code>response_finalized</code> set. Recipes still go through turn admission, still persist messages, and still emit traces, tagged <code>route=recipe</code> so you can count them.</p>
+
+<h2>UI shortcuts</h2>
+<p>Recipes pair well with quick-reply chips. A "Show usage" chip sends the canonical alias, so the click is guaranteed to hit the recipe. It is the same path as typing, which keeps behaviour consistent and testable.</p>
+
+<h2>Keep the list short</h2>
+<p>Recipes are for commands, not for questions. If you find yourself adding "what is the leave policy" as a recipe, that is a sign you want retrieval (step 19) or a better capability card. A good recipe list fits on one screen and changes rarely.</p>

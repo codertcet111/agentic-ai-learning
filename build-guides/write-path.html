@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Add a confirmed write | Agentic Field Notes</title>
+  <meta name="description" content="Add the first data-changing action to an AI assistant safely: confirmation forms, explicit action flags, operation ids, upstream idempotency and double-submit tests.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/build-guides/write-path.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/build-guides/write-path.html">
+  <meta property="og:title" content="Add a confirmed write">
+  <meta property="og:description" content="Add the first data-changing action to an AI assistant safely: confirmation forms, explicit action flags, operation ids, upstream idempotency and double-submit tests.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Add a confirmed write","description":"Add the first data-changing action to an AI assistant safely: confirmation forms, explicit action flags, operation ids, upstream idempotency and double-submit tests.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Build Guides</a> / Add a confirmed write</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Add a confirmed write</h1>
+        <p class="lead" itemprop="description">Add the first data-changing action to an AI assistant safely: confirmation forms, explicit action flags, operation ids, upstream idempotency and double-submit tests.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="default"></div>
+      <p>Reads can be wrong. Writes can be wrong <em>and permanent</em>. The first time your assistant can create, update or cancel something, the engineering bar goes up. This guide walks through adding one write, such as "submit a leave request", with the safeguards it needs.</p>
+
+<h2>The flow</h2>
+<pre><code>User: "book Friday off"
+  → plan: call_tool leave.request.create
+  → resolve: dates resolved; approver from profile
+  → request_input: confirmation card (summary + fingerprint)
+User: [Confirm]
+  → form_submission (pending id, revision, fingerprint)
+  → invoke with explicit_action=true, operation_id=trn_87:step_4
+  → compose: "Submitted. Request #5531 is waiting for approval."</code></pre>
+
+<h2>Safeguard 1: confirmation is mandatory</h2>
+<p>Mark the capability <code>requires_confirmation: true</code> in the catalog. The graph always routes such capabilities through <code>request_input</code> before <code>invoke</code>. This is a graph rule, not a prompt instruction, so the model cannot skip it.</p>
+
+<h2>Safeguard 2: explicit action</h2>
+<p>The provider refuses any write unless <code>explicit_action=true</code>, and only the confirmation-resume path sets that flag. Even if a bug or an unexpected plan reached <code>invoke</code> directly, the write would not happen.</p>
+
+<h2>Safeguard 3: confirm exactly what runs</h2>
+<p>The confirmation shows a human-readable summary of the resolved arguments and carries a fingerprint of them. On submit, the server recomputes the fingerprint from the checkpoint. If they differ, the submission is rejected and a fresh confirmation is shown (see <a href="../graph-orchestration/human-in-the-loop.html">human-in-the-loop</a>).</p>
+
+<h2>Safeguard 4: idempotent execution</h2>
+<p>The <code>operation_id</code> is built from the turn and step, never from model output, and sent as the upstream <code>Idempotency-Key</code>. Retries after timeouts and double-clicks on Confirm produce one record (see <a href="../data-patterns/idempotency-patterns.html">idempotency patterns</a>).</p>
+
+<h2>Safeguard 5: honest results</h2>
+<p>Compose reports what the upstream returned: the new record's id and status, or the business error ("You already have leave booked on that day"). It never says "done" unless the provider returned success.</p>
+
+<h2>Tests to write</h2>
+<ul>
+  <li>Happy path: one confirmation, one upstream call, success message.</li>
+  <li>Cancel: no upstream call.</li>
+  <li>Double submit of the same confirmation: one upstream call, and both responses show the same result.</li>
+  <li>Stale fingerprint: rejected with a fresh confirmation.</li>
+  <li>Free text while the confirmation is open: confirmation superseded, no write.</li>
+  <li>Upstream 409 conflict: business error explained, no retry.</li>
+  <li>Upstream timeout, then retry: one record created.</li>
+  <li>A user without permission: upstream 403 surfaced politely.</li>
+</ul>
+<p>Tag all of these as <code>write</code> in the golden suite and require them to pass for every release.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="feature-slice.html">← Ship one copilot feature</a><a href="local-dev.html">Local dev topology →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Double-submit</dt><dd>Duplicate user action causing repeated writes.</dd><dt>Confirmation form</dt><dd>UI step proving intent.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

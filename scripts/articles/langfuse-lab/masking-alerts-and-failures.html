@@ -1,0 +1,36 @@
+<!-- desc: Mask personal data before exporting LLM traces, alert on residual PII without logging the values, and record clear failure reasons on root traces for faster debugging. -->
+<p>LLM traces are full of user text: questions, names, dates, sometimes things users should not have typed. Before any of it leaves your service, it should pass through a <strong>masking exporter</strong>. When masking misses something, you want to know without copying the sensitive value into yet another system.</p>
+
+<h2>How the masking exporter works</h2>
+<ol>
+  <li>Spans are collected in-process as usual.</li>
+  <li>Before export, a processor walks every string attribute, input and output.</li>
+  <li>Known identifiers (user ids, tenant ids) are replaced with keyed pseudonyms, an HMAC with a secret, so the same user always maps to the same placeholder but cannot be reversed.</li>
+  <li>Pattern detectors replace emails, phone numbers, card-like numbers and national id formats with typed placeholders such as <code>&lt;EMAIL_1&gt;</code>.</li>
+  <li>In <code>structure</code> mode, free text is dropped entirely and only its length and type are kept.</li>
+</ol>
+
+<h2>Residual alerts</h2>
+<p>After masking, a second, stricter scan checks whether anything that looks sensitive survived. If it finds something, it:</p>
+<ul>
+  <li>drops or blanks the affected field before export,</li>
+  <li>sends a throttled alert to the error tracker with the span name and the <em>kinds</em> of data found (for example "email, phone"), but never the values,</li>
+  <li>increments a metric so you can see whether residuals are rare accidents or a systematic gap.</li>
+</ul>
+<p>Throttle the alerts per span name, or a single new prompt template can flood the channel.</p>
+
+<h2>Failure reasons on the root trace</h2>
+<p>Set a <code>failure_reason</code> on the root observation whenever a turn does not complete normally:</p>
+<table>
+  <thead><tr><th>Reason</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>run_timeout</code></td><td>The turn exceeded its wall-clock budget</td></tr>
+    <tr><td><code>graph_error</code></td><td>An unhandled exception inside the graph</td></tr>
+    <tr><td><code>run_failed</code></td><td>A handled business failure (denied capability, validation error)</td></tr>
+    <tr><td><code>cancelled</code></td><td>The user or system cancelled an in-progress turn</td></tr>
+  </tbody>
+</table>
+<p>With this as metadata you can filter traces by reason and chart each one separately. A rise in <code>run_timeout</code> needs a different response from a rise in <code>graph_error</code>.</p>
+
+<h2>Linking to support records</h2>
+<p>The root trace's metadata also carries the id of the matching <a href="../data-patterns/failure-records.html">failure record</a> in MongoDB. Support works from the sanitized failure record; engineers follow the link into the trace when they need detail.</p>

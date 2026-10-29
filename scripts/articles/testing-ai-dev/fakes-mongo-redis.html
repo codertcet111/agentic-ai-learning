@@ -1,0 +1,40 @@
+<!-- desc: Use in-memory fakes for MongoDB repositories and Redis in agent backend tests: repository interfaces, behaviour that matches the real store, and integration tests behind a marker. -->
+<p>Graph and service tests should run in seconds, without Docker. The way to get there is to put persistence behind small repository interfaces and give each interface an in-memory fake. The real MongoDB and Redis are tested separately, in a smaller set of integration tests.</p>
+
+<h2>Repository interfaces</h2>
+<pre><code>class MessageRepo(Protocol):
+    async def append(self, msg: NewMessage) -&gt; StoredMessage: ...
+    async def list_after(self, conversation_id: str, seq: int, limit: int) -&gt; list[StoredMessage]: ...
+
+class TurnLedgerRepo(Protocol):
+    async def begin(self, conversation_id: str, client_request_id: str) -&gt; TurnEntry: ...
+    async def complete(self, turn_id: str, message_id: str) -&gt; bool: ...</code></pre>
+<p>Services and graph nodes depend on these protocols, never on the database driver directly.</p>
+
+<h2>Fakes that behave like the real thing</h2>
+<p>A fake is only useful if it enforces the same rules as the real store. The important ones:</p>
+<ul>
+  <li><strong>Unique constraints</strong>: appending a duplicate idempotency key raises the same <code>DuplicateKey</code> error your Mongo repository raises.</li>
+  <li><strong>Conditional updates</strong>: <code>complete()</code> returns <code>False</code> if the turn is not in the expected state, just like a zero-match update.</li>
+  <li><strong>Ordering</strong>: <code>list_after</code> sorts by sequence.</li>
+  <li><strong>Copies</strong>: return copies of stored objects, so tests cannot accidentally mutate "database" state through a reference.</li>
+</ul>
+
+<h2>One contract suite for both</h2>
+<p>Write the repository tests once and run them against both implementations:</p>
+<pre><code>@pytest.fixture(params=["fake", pytest.param("mongo", marks=pytest.mark.integration)])
+def message_repo(request, mongo_db):
+    return FakeMessageRepo() if request.param == "fake" else MongoMessageRepo(mongo_db)
+
+async def test_duplicate_idempotency_key_raises(message_repo): ...</code></pre>
+<p>If the fake and the real repository ever disagree, this suite finds it.</p>
+
+<h2>Redis fakes</h2>
+<p>For Redis, a library such as <code>fakeredis</code> covers most commands in memory. For the graceful-degradation tests, also use a fake that raises connection errors on every call. That is the simplest way to prove the system works with Redis down.</p>
+
+<h2>Markers</h2>
+<pre><code># pyproject.toml
+[tool.pytest.ini_options]
+markers = ["integration: needs real MongoDB/Redis (docker compose up)"]
+addopts = "-m 'not integration'"</code></pre>
+<p>Developers run the fast suite constantly. CI runs both, with integration tests against service containers.</p>

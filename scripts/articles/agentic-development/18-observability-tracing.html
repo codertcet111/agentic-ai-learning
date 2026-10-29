@@ -1,0 +1,46 @@
+<!-- desc: Trace every agent turn from request id to conversation, graph run, nodes, LLM calls and tool invokes, with pseudonymized identifiers and no secrets in span attributes. -->
+<p>When a user says "the bot gave me a weird answer yesterday afternoon", you need to find that exact turn and see every decision it made. That is what tracing is for. The goal of this step is one trace per turn, with a predictable shape, linked to your logs and your database.</p>
+
+<h2>The correlation chain</h2>
+<pre><code>X-Request-Id  ──► structured logs
+     │
+     └─► conversation_id + turn_id ──► Mongo (messages, turn_ledger, failure_records)
+              │
+              └─► trace_id ──► tracing backend (Langfuse, OpenTelemetry collector, APM)</code></pre>
+<p>Every log line carries <code>request_id</code>. The turn ledger stores <code>trace_id</code>. The trace's metadata carries <code>conversation_id</code> and <code>turn_id</code>. From any one of them, you can reach the others in a single search.</p>
+
+<h2>Span names</h2>
+<p>Agree on a small, fixed vocabulary and use it everywhere:</p>
+<table>
+  <thead><tr><th>Span</th><th>Parent</th><th>Key attributes</th></tr></thead>
+  <tbody>
+    <tr><td><code>agent.request</code></td><td>root</td><td>route, tenant (pseudonymized), locale, catalog_hash</td></tr>
+    <tr><td><code>langgraph.run</code></td><td>agent.request</td><td>thread_id, resumed (bool)</td></tr>
+    <tr><td><code>langgraph.node</code></td><td>langgraph.run</td><td>node name, step index</td></tr>
+    <tr><td><code>llm.call</code></td><td>node</td><td>model, purpose, input/output tokens, cost, latency</td></tr>
+    <tr><td><code>capability.invoke</code></td><td>node</td><td>capability id, provider, status, error class, latency</td></tr>
+  </tbody>
+</table>
+<p>The <code>purpose</code> attribute on LLM calls (<code>route</code>, <code>plan</code>, <code>resolve</code>, <code>compose</code>) is what lets you answer "where do our tokens go?" with a single grouped query.</p>
+
+<h2>OpenTelemetry or vendor SDK?</h2>
+<p>Both work. OpenTelemetry gives you one instrumentation layer that can export to several backends, including APM tools and LLM-specific ones. Langfuse and similar tools accept OpenTelemetry spans and also offer their own SDKs with LLM-aware fields such as token usage and cost. A common setup is OpenTelemetry for request and infrastructure spans, with LLM spans enriched with the attribute names the LLM observability tool expects. The <a href="../../langfuse-lab/index.html">Langfuse Lab</a> section walks through the UI side.</p>
+
+<h2>What never goes in a span</h2>
+<ul>
+  <li>Tokens, cookies, API keys and authorization headers.</li>
+  <li>Raw user identifiers. Use a keyed hash (HMAC) so the same user maps to the same pseudonym without being reversible.</li>
+  <li>Full prompts and outputs in production, unless your privacy review has approved a masked capture mode.</li>
+</ul>
+<p>Enforce this in the exporter, not by asking every developer to remember. A masking processor that runs before export is the single point of control.</p>
+
+<h2>Alerts that pay off</h2>
+<ul>
+  <li><strong>Planner failure rate</strong> above baseline: usually a catalog or schema change, not the model.</li>
+  <li><strong>403 spike on capability.invoke</strong>: permission drift between the catalog and upstream.</li>
+  <li><strong>LLM calls per turn</strong> p95 rising: loops or ambiguous tool descriptions.</li>
+  <li><strong>Turn duration</strong> p95 above budget: check provider latency before blaming the model.</li>
+</ul>
+
+<h2>Sampling</h2>
+<p>Trace 100% of turns in development and staging. In production, trace all errored turns and a sample of successful ones if volume or cost demands it. Make the sampling decision at the root span, so you never keep half a trace.</p>

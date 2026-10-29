@@ -1,0 +1,38 @@
+<!-- desc: Secure an AI orchestrator with token forwarding instead of token storage: per-request context, no shared cookie jars, scoped outbound calls and redaction at every exit. -->
+<p>An orchestrator that calls domain APIs on a user's behalf has to authenticate those calls somehow. The safest default is to forward the user's own credential with each request and never store it. The orchestrator then has no standing access of its own, and the domain applies exactly the permissions it would for the web app.</p>
+
+<h2>Forwarding versus a service account</h2>
+<table>
+  <thead><tr><th></th><th>Forward user token</th><th>Service account</th></tr></thead>
+  <tbody>
+    <tr><td>Permissions</td><td>Exactly the user's</td><td>Whatever the account has, often too much</td></tr>
+    <tr><td>Audit in domain logs</td><td>Shows the real user</td><td>Shows the service; needs extra headers</td></tr>
+    <tr><td>Blast radius if orchestrator is compromised</td><td>Only active sessions' tokens, briefly</td><td>Everything the account can do</td></tr>
+    <tr><td>Works for background jobs</td><td>No; needs a user present</td><td>Yes</td></tr>
+  </tbody>
+</table>
+<p>For interactive chat, forwarding is the better default. Where the identity provider supports it, OAuth token exchange can produce a narrower, short-lived token for each downstream audience, which is better still.</p>
+
+<h2>The mechanics</h2>
+<ul>
+  <li>Middleware copies the credential into request context (<a href="../agentic-development/steps/03-request-context.html">step 3</a>). It never enters graph state, checkpoints or the prompt.</li>
+  <li>Providers attach it to each outbound call explicitly.</li>
+  <li>Shared HTTP clients have cookie persistence disabled, so one user's session cookie can never be sent with another user's request.</li>
+  <li>Outbound calls go only to configured upstream hosts. The model cannot supply a URL.</li>
+</ul>
+
+<h2>Never let the model see credentials</h2>
+<p>Prompts must not contain tokens, even "for context". Anything in a prompt can appear in the model's output, in traces and in provider logs. If a tool needs a credential, the provider adds it after the model has produced the arguments.</p>
+
+<h2>Redact at every exit</h2>
+<p>Credentials leak through side channels far more often than through the main path:</p>
+<ul>
+  <li>Exception messages from HTTP libraries that include request headers.</li>
+  <li>Debug logging of full request objects.</li>
+  <li>Error tracker events capturing local variables.</li>
+  <li>Trace attributes copied from request metadata.</li>
+</ul>
+<p>Install redaction in the shared logging configuration, the error tracker's before-send hook and the trace exporter. Then test it: run a turn with a recognisable fake token and assert it appears in none of the outputs.</p>
+
+<h2>Expiry handling</h2>
+<p>Forwarded tokens expire. When an upstream returns 401, map it to <code>auth_expired</code>, tell the user to sign in again, and do not retry. Refresh tokens belong to the client application, not the orchestrator.</p>

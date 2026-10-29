@@ -1,0 +1,42 @@
+<!-- desc: Control LLM costs in production agents: per-turn token and call caps, model routing, prompt caching, catalog trimming, rate limits per tenant and budget alerts. -->
+<p>LLM costs scale with usage and with carelessness. A prompt that grew by 2,000 tokens, a planner that loops once more than needed, or one tenant's automated script can each double a monthly bill. Cost controls are guardrails you put in place before you need them.</p>
+
+<h2>Know where tokens go</h2>
+<p>Tag every LLM call with a <code>purpose</code> (route, plan, resolve, compose, judge) and record input and output tokens. A weekly breakdown by purpose usually shows that planning dominates, and within planning, the capability cards and transcript window are the bulk of input tokens. Optimize what the numbers point at.</p>
+
+<h2>Per-turn caps</h2>
+<ul>
+  <li><strong>Max LLM calls per turn</strong> (for example 8): when reached, stop planning and compose with what you have.</li>
+  <li><strong>Max input tokens per call</strong>: the window builder trims the transcript to fit.</li>
+  <li><strong>Max output tokens</strong> per purpose: planners need few, compose needs more.</li>
+  <li><strong>Graph recursion limit</strong>: a hard backstop for loops.</li>
+</ul>
+
+<h2>Shrink the prompt</h2>
+<ul>
+  <li><strong>Filter the catalog</strong> per agent and per user. Twelve relevant tools beat sixty, for both cost and accuracy.</li>
+  <li><strong>Summarize tool results</strong> in state instead of passing raw payloads to the planner.</li>
+  <li><strong>Trim the transcript window</strong> by token budget, and summarize older turns.</li>
+  <li><strong>Use prompt caching</strong> where your provider supports it. Put stable content (system prompt, policy, capability cards) first and variable content last, so the stable prefix is cached and billed at a lower rate.</li>
+</ul>
+
+<h2>Route by difficulty</h2>
+<p>Use a smaller, cheaper model for routing, classification and simple argument filling, and a larger model for planning ambiguous requests and composing nuanced answers. Recipes (<a href="../agentic-development/steps/15-routing-recipes.html">step 15</a>) skip the model entirely for known commands. See <a href="../llm-engineering/model-routing.html">model routing</a>.</p>
+
+<h2>Protect against noisy neighbours</h2>
+<ul>
+  <li>Rate limits per principal per minute, in Redis.</li>
+  <li>Daily token quotas per tenant, checked during turn admission.</li>
+  <li>Circuit breakers on tools that fail repeatedly, so retries do not trigger extra planning.</li>
+</ul>
+
+<h2>Cache what is safe to cache</h2>
+<p>Cache merged catalogs, capability snapshots and short-lived lookup results. Do not cache LLM responses to user messages across users. The privacy risk and stale-answer risk outweigh the savings for most assistants.</p>
+
+<h2>Alerts</h2>
+<ul>
+  <li>Daily spend estimate above a threshold per environment.</li>
+  <li>Tokens per turn p95 rising week over week.</li>
+  <li>Any single tenant above a set share of total usage.</li>
+</ul>
+<p>Review the cost dashboard after every release that touches prompts or the catalog. Cost regressions are much easier to fix the day they ship.</p>

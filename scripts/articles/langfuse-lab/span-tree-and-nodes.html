@@ -1,0 +1,27 @@
+<!-- desc: Read the Langfuse span tree to see time and cost per graph node, spot planner loops and slow tool calls, and explain why a particular chat turn was expensive. -->
+<p>Open a trace and look at the <strong>tree view</strong>. Each row is an observation, and indentation shows parent and child. This is how you prove which <em>node</em> used the time or the budget.</p>
+{{IMG_SPAN_TREE}}
+<h2>Reading the tree</h2>
+<ul>
+  <li><strong>Root</strong>: usually named like <code>chat-turn</code>. Its duration and total cost should match what the traces list showed.</li>
+  <li><strong>Router</strong>: <code>route-request</code> or the direct-recipe path. If this is slow or expensive, the routing prompt or catalog has grown.</li>
+  <li><strong>Agent steps</strong>: one observation per graph step. Their children are the LLM and tool calls that step made.</li>
+  <li><strong>Generations</strong>: each LLM call shows its token counts and cost. Several planner generations in one turn usually mean ambiguous input or missing lookup results.</li>
+  <li><strong>Tool spans</strong>: <code>capability.invoke</code> latency separates network or upstream slowness from model slowness.</li>
+</ul>
+
+<h2>A worked example</h2>
+<pre><code>chat-turn                         4.9 s   $0.031
+├── route-request                 0.4 s   $0.001
+├── plan                          1.3 s   $0.011
+├── invoke employees.search       0.3 s
+├── plan                          1.4 s   $0.012   ← second planning pass
+├── request_input (choice)        0.0 s
+└── compose                       1.5 s   $0.007</code></pre>
+<p>The user said "approver Sara". Two employees matched, so the planner ran a second time with both candidates and asked the user to choose. This is correct behaviour, and the tree shows exactly what it cost. If the second plan happened on <em>every</em> approver request, you would consider adding the user's manager to the lookup query, so that one match is usually found directly.</p>
+
+<h2>Why per-node cost matters</h2>
+<p>When product asks "why is this chat expensive?", you expand the tree, compare children by cost, and point to the specific planner and compose pair, or an extra retrieval call. That leads to targeted fixes, such as caching the catalog, shrinking the tool list or adding a direct recipe, instead of a blanket model downgrade that hurts quality everywhere.</p>
+
+<h2>Timeline view</h2>
+<p>Langfuse can also show observations on a timeline. Use it to spot sequential calls that could run in parallel. Two independent read capabilities called one after another are an easy latency win.</p>

@@ -1,0 +1,40 @@
+<!-- desc: Run automated turn checks when each agent trace completes: limits on LLM calls, wall-clock time, slow generations, cost and reply size, recorded as Langfuse scores. -->
+<p>Server-side <strong>turn checks</strong> run when a turn's trace completes. They turn observability into guardrails: every turn is measured against budgets, and the results are stored as scores you can filter and chart.</p>
+
+<h2>The facts a check needs</h2>
+<pre><code>@dataclass
+class TurnFacts:
+    trace_id: str
+    duration_s: float
+    llm_calls: int
+    slowest_llm_call_s: float
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float | None          # None when prices are not configured
+    reply_chars: int
+    failure_reason: str | None</code></pre>
+<p>Collect these while the turn runs (counters in the tracing layer), not by querying Langfuse afterwards. The checks then run synchronously at the end of the turn.</p>
+
+<h2>Typical limits (configure per environment)</h2>
+<table>
+  <thead><tr><th>Check</th><th>Example limit</th><th>Catches</th></tr></thead>
+  <tbody>
+    <tr><td>Max LLM calls per turn</td><td>6</td><td>Planner loops</td></tr>
+    <tr><td>Max turn duration</td><td>20 s</td><td>Hung upstream calls</td></tr>
+    <tr><td>Slow LLM call</td><td>8 s</td><td>Provider latency, oversized prompts</td></tr>
+    <tr><td>Max cost per turn</td><td>$0.05</td><td>Runaway prompts (only when prices are configured)</td></tr>
+    <tr><td>Max reply characters</td><td>3,000</td><td>Huge replies that overwhelm mobile clients</td></tr>
+  </tbody>
+</table>
+<p>Skip the cost check entirely when prices are not configured, rather than recording a misleading pass.</p>
+
+<h2>Recording results</h2>
+<p>Each check writes a boolean score to the trace (for example <code>within_llm_call_budget</code>) with a comment containing the actual value, and logs a structured warning when it fails. In Langfuse you can then filter traces by failed checks and chart pass rates by release.</p>
+
+<h2>How I use them during development</h2>
+<ul>
+  <li>A failed cost or call-count check on golden cases blocks a prompt change that adds tools, until it is understood.</li>
+  <li>A rise in failed latency checks after a deploy points straight to the slow observations.</li>
+  <li>Weekly, I look at the pass rate trends. A slow decline usually means the catalog is growing.</li>
+</ul>
+<div class="callout">Pair turn checks with golden evals: checks catch runaway behaviour on every turn; golden cases catch wrong capability choices on known scenarios.</div>

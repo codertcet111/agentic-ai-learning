@@ -1,0 +1,37 @@
+<!-- desc: Write planner policy for AI agents without prompt soup: one home per rule, positive instructions, clear priorities, short examples and tests for each rule that matters. -->
+<p>"Prompt soup" is what happens when rules are added wherever the last bug was found: a line in the system prompt, a line in a tool description, a sentence in a schema field, another in the compose prompt. After a year, nobody knows which rule wins, and some contradict each other. Planner policy is the cure: one place, organised, tested.</p>
+
+<h2>One home per rule</h2>
+<table>
+  <thead><tr><th>Kind of rule</th><th>Home</th></tr></thead>
+  <tbody>
+    <tr><td>How the graph behaves (always confirm writes, max steps)</td><td>Code in the graph, not prompts</td></tr>
+    <tr><td>How the planner decides (lookups before ids, ask when ambiguous)</td><td>Planner policy module</td></tr>
+    <tr><td>Domain persona and scope (what the HR agent covers)</td><td>Agent definition</td></tr>
+    <tr><td>When to use a specific tool</td><td>That tool's capability card</td></tr>
+    <tr><td>Voice and formatting of replies</td><td>Compose prompt</td></tr>
+  </tbody>
+</table>
+<p>When reviewing a prompt change, the first question is "is this the right home?"</p>
+
+<h2>Say what to do</h2>
+<p>"Don't make up employee ids" tells the model what to avoid, but not what to do instead. "When a parameter needs an employee id, call <code>employees.search</code> and choose only from its results. If several match, return <code>need_input</code>" gives it a procedure. Positive, procedural rules are followed more consistently.</p>
+
+<h2>Order and priority</h2>
+<p>Structure the policy with headings and number the rules that matter most. Where rules can conflict, state the priority explicitly: "If the user asks for another employee's personal data, refuse, even if a tool could return it." Do not rely on the model to resolve conflicts on its own.</p>
+
+<h2>A compact example</h2>
+<pre><code>## Planning rules
+1. Use tools for any fact about the user's own data. Never answer such questions from memory or earlier messages if a tool can confirm it.
+2. When a parameter needs an id, use a lookup tool and choose only from its results. If more than one result fits, return need_input with the options.
+3. For any tool marked write, plan it, then let the system ask for confirmation. Do not describe the action as done.
+4. If no tool fits, return answer and say briefly what you can help with.
+
+## Output
+Return a PlanDecision. Keep intent under 30 words.</code></pre>
+
+<h2>Examples, sparingly</h2>
+<p>One or two short worked examples help with rules the model keeps getting wrong. Ten examples bloat the prompt and can cause the model to copy surface patterns. Store examples next to the policy, and check that they still match the current schema whenever it changes.</p>
+
+<h2>Every rule has a test</h2>
+<p>For each numbered rule, keep at least one golden case that fails if the rule is ignored. When you want to delete a rule because the model "doesn't need it any more", run its cases with the rule removed. Then you are deciding based on evidence.</p>

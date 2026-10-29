@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Turn checks: automated budgets on every trace | Agentic Field Notes</title>
+  <meta name="description" content="Run automated turn checks when each agent trace completes: limits on LLM calls, wall-clock time, slow generations, cost and reply size, recorded as Langfuse scores.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/turn-checks-and-budgets.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/turn-checks-and-budgets.html">
+  <meta property="og:title" content="Turn checks: automated budgets on every trace">
+  <meta property="og:description" content="Run automated turn checks when each agent trace completes: limits on LLM calls, wall-clock time, slow generations, cost and reply size, recorded as Langfuse scores.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Turn checks: automated budgets on every trace","description":"Run automated turn checks when each agent trace completes: limits on LLM calls, wall-clock time, slow generations, cost and reply size, recorded as Langfuse scores.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Langfuse Lab</a> / Turn checks: automated budgets on every trace</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Turn checks: automated budgets on every trace</h1>
+        <p class="lead" itemprop="description">Run automated turn checks when each agent trace completes: limits on LLM calls, wall-clock time, slow generations, cost and reply size, recorded as Langfuse scores.</p>
+        <p class="meta">1 min read</p>
+      </header>
+      <div data-visual="eval"></div>
+      <p>Server-side <strong>turn checks</strong> run when a turn's trace completes. They turn observability into guardrails: every turn is measured against budgets, and the results are stored as scores you can filter and chart.</p>
+
+<h2>The facts a check needs</h2>
+<pre><code>@dataclass
+class TurnFacts:
+    trace_id: str
+    duration_s: float
+    llm_calls: int
+    slowest_llm_call_s: float
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float | None          # None when prices are not configured
+    reply_chars: int
+    failure_reason: str | None</code></pre>
+<p>Collect these while the turn runs (counters in the tracing layer), not by querying Langfuse afterwards. The checks then run synchronously at the end of the turn.</p>
+
+<h2>Typical limits (configure per environment)</h2>
+<table>
+  <thead><tr><th>Check</th><th>Example limit</th><th>Catches</th></tr></thead>
+  <tbody>
+    <tr><td>Max LLM calls per turn</td><td>6</td><td>Planner loops</td></tr>
+    <tr><td>Max turn duration</td><td>20 s</td><td>Hung upstream calls</td></tr>
+    <tr><td>Slow LLM call</td><td>8 s</td><td>Provider latency, oversized prompts</td></tr>
+    <tr><td>Max cost per turn</td><td>$0.05</td><td>Runaway prompts (only when prices are configured)</td></tr>
+    <tr><td>Max reply characters</td><td>3,000</td><td>Huge replies that overwhelm mobile clients</td></tr>
+  </tbody>
+</table>
+<p>Skip the cost check entirely when prices are not configured, rather than recording a misleading pass.</p>
+
+<h2>Recording results</h2>
+<p>Each check writes a boolean score to the trace (for example <code>within_llm_call_budget</code>) with a comment containing the actual value, and logs a structured warning when it fails. In Langfuse you can then filter traces by failed checks and chart pass rates by release.</p>
+
+<h2>How I use them during development</h2>
+<ul>
+  <li>A failed cost or call-count check on golden cases blocks a prompt change that adds tools, until it is understood.</li>
+  <li>A rise in failed latency checks after a deploy points straight to the slow observations.</li>
+  <li>Weekly, I look at the pass rate trends. A slow decline usually means the catalog is growing.</li>
+</ul>
+<div class="callout">Pair turn checks with golden evals: checks catch runaway behaviour on every turn; golden cases catch wrong capability choices on known scenarios.</div>
+<nav class="post-nav" aria-label="More in this section"><a href="trace-detail-io-and-tokens.html">← Trace detail: IO, tokens, and model metadata</a><a href="masking-alerts-and-failures.html">Masking residuals, failures, and Rollbar alerts →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Turn check</dt><dd>Automated policy evaluated on TurnFacts after a chat turn.</dd><dt>MTok</dt><dd>Millions of tokens; pricing unit for many model APIs.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

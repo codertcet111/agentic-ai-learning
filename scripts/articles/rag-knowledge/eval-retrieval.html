@@ -1,0 +1,46 @@
+<!-- desc: Evaluate RAG retrieval on its own before judging answers: build a labelled question set, measure recall@k and MRR, and use the results to tune chunking and search. -->
+<p>When a RAG assistant gives a bad answer, there are two very different possible causes: the right text was never retrieved, or it was retrieved and the model used it badly. End-to-end answer evaluation mixes them together. Evaluating retrieval on its own separates them, and it is cheap, fast and deterministic.</p>
+
+<h2>Build a labelled set</h2>
+<p>Collect 50 to 100 real questions, from support tickets, chat logs or subject-matter experts. For each, record which document (and ideally which section) contains the answer:</p>
+<pre><code>{"q": "Can I carry over unused leave into next year?",
+ "relevant": ["doc_hr-leave-policy#4"], "tags": ["hr", "en"]}
+{"q": "What's the carry-over limit for part-time staff?",
+ "relevant": ["doc_hr-leave-policy#4.2"], "tags": ["hr", "en", "specific"]}
+{"q": "How do I reset my VPN token?",
+ "relevant": ["doc_it-vpn-guide#reset"], "tags": ["it", "en"]}</code></pre>
+<p>Include paraphrases, acronyms, questions in every language you support, and a few questions that have <em>no</em> answer in the corpus. Those test whether low scores are handled correctly.</p>
+
+<h2>Metrics</h2>
+<ul>
+  <li><strong>Recall@k</strong>: the share of questions where at least one relevant chunk appears in the top k results. If compose receives the top 5, recall@5 is the ceiling on answer quality.</li>
+  <li><strong>MRR (mean reciprocal rank)</strong>: the average of 1/rank of the first relevant result. It rewards putting the right chunk first, which matters when you pass few chunks to the model.</li>
+</ul>
+<pre><code>def recall_at_k(results, relevant, k):
+    return any(r.section_id in relevant for r in results[:k])
+
+def reciprocal_rank(results, relevant):
+    for i, r in enumerate(results, 1):
+        if r.section_id in relevant:
+            return 1 / i
+    return 0.0</code></pre>
+<p>Match at section level, not chunk id, so that re-chunking does not invalidate your labels.</p>
+
+<h2>Use it to tune</h2>
+<p>With the evaluation in place, every change gets a number:</p>
+<table>
+  <thead><tr><th>Change</th><th>What to watch</th></tr></thead>
+  <tbody>
+    <tr><td>Chunk size or overlap</td><td>Recall@5 overall and on "specific" questions</td></tr>
+    <tr><td>Adding heading context to chunks</td><td>Recall on short or follow-up-style questions</td></tr>
+    <tr><td>Hybrid search (BM25 + vectors)</td><td>Recall on acronym and code-heavy questions</td></tr>
+    <tr><td>Reranker</td><td>MRR, plus added latency</td></tr>
+    <tr><td>New embedding model</td><td>Everything, per language</td></tr>
+  </tbody>
+</table>
+
+<h2>Then evaluate answers</h2>
+<p>Once recall is good (a common target is above 0.9 at k=5 for core questions), move on to answer quality: is the answer supported by the cited chunk, does it quote numbers exactly, does it say "not found" when nothing relevant was retrieved? That step benefits from a rubric-based judge (see <a href="../evaluation/llm-judges.html">LLM-as-judge</a>). Without the retrieval numbers, you would not know whether a bad answer score points at chunking or at prompting.</p>
+
+<h2>Keep it in CI</h2>
+<p>Retrieval evaluation needs no LLM calls, only embedding the queries, so it can run on every change to chunking or indexing code. Fail the build if recall drops more than a couple of points.</p>

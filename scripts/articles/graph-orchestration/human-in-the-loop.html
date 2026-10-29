@@ -1,0 +1,37 @@
+<!-- desc: Design human-in-the-loop pauses for approvals and forms with durable pending state, expiry, fingerprints against stale UI and clear transition messages. -->
+<p>Some actions should not happen just because a model decided they should. Cancelling an order, submitting a leave request, sending an email on someone's behalf: these need a human to say yes. Human-in-the-loop (HITL) is how the graph stops, waits and resumes safely.</p>
+
+<h2>Kinds of pause</h2>
+<table>
+  <thead><tr><th>Kind</th><th>Who responds</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td>Confirmation</td><td>The user</td><td>"Submit leave for 6–7 Nov?" [Confirm] [Edit] [Cancel]</td></tr>
+    <tr><td>Form</td><td>The user</td><td>Choose approver, add a note</td></tr>
+    <tr><td>Choice</td><td>The user</td><td>Pick one of two matching employees</td></tr>
+    <tr><td>Approval</td><td>Another person</td><td>Manager approves an expense above a limit</td></tr>
+  </tbody>
+</table>
+<p>The first three are covered by <a href="../agentic-development/steps/08-pending-interactions.html">pending interactions</a>. Approval by another person usually belongs in the domain system's own workflow. The orchestrator submits the request, and the approval happens in the HR or finance tool, not inside a paused graph that might wait for days.</p>
+
+<h2>LangGraph mechanics</h2>
+<p>LangGraph supports pausing with <code>interrupt()</code> inside a node. The run stops, the checkpoint records the interrupt, and the caller receives the interrupt payload. Resuming means invoking with the same thread id and <code>Command(resume=value)</code>. Wrap this so the rest of your code deals with pending interactions, not raw interrupts:</p>
+<pre><code>def request_confirmation(state, config):
+    pi = create_pending_interaction(kind="confirmation", summary=state["plan"], ...)
+    answer = interrupt({"pending_interaction_id": pi.id})
+    # execution continues here after resume
+    return {"confirmed": answer["action"] == "confirm"}</code></pre>
+
+<h2>Fingerprints against stale UI</h2>
+<p>A confirmation should be for exactly what the user saw. Compute a fingerprint, a hash of the capability id and the resolved arguments, and include it in the confirmation payload. On submit, recompute it from the checkpoint and compare. If anything changed (a re-plan adjusted the dates, a second tab edited the form) the submission is rejected and the user sees the current version. This prevents "I confirmed Friday but it booked Monday".</p>
+
+<h2>Expiry and transition messages</h2>
+<p>Every pause has an expiry. When it lapses:</p>
+<ul>
+  <li>Mark the interaction expired and delete its checkpoint.</li>
+  <li>Append a short assistant message: "That leave request wasn't submitted because the confirmation expired. Want me to set it up again?"</li>
+  <li>The client disables the stale buttons.</li>
+</ul>
+<p>Without the message, users return the next day, click Confirm, get an error, and lose trust.</p>
+
+<h2>What not to pause for</h2>
+<p>Do not ask for confirmation on reads. "Do you want me to look up your balance?" adds friction with no safety benefit. Reserve HITL for writes, irreversible actions and genuine ambiguity. Users quickly learn to click through confirmations that appear too often, which defeats their purpose.</p>

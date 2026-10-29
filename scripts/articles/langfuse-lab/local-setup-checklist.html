@@ -1,0 +1,38 @@
+<!-- desc: A checklist for setting up Langfuse tracing locally for an agent backend: environment variables, region, capture mode, first trace, and common reasons traces do not appear. -->
+<p>Getting the first trace to appear is usually five minutes of configuration and, occasionally, an hour of wondering why nothing shows up. This checklist covers both.</p>
+
+<h2>1. Choose where Langfuse runs</h2>
+<ul>
+  <li><strong>Langfuse Cloud</strong>: create a project and copy its public and secret keys. Note which region your project is in, because the base URL differs per region.</li>
+  <li><strong>Self-hosted</strong>: Langfuse publishes a Docker Compose setup for local use. Point the base URL at your local instance.</li>
+</ul>
+
+<h2>2. Environment variables</h2>
+<pre><code># Example: prefix them per your settings class
+AGENTIC_LANGFUSE_ENABLED=true
+AGENTIC_LANGFUSE_PUBLIC_KEY=pk-lf-...
+AGENTIC_LANGFUSE_SECRET_KEY=sk-lf-...
+AGENTIC_LANGFUSE_BASE_URL=https://cloud.langfuse.com     # or your region / local URL
+AGENTIC_LANGFUSE_ENVIRONMENT=development
+AGENTIC_LANGFUSE_CAPTURE=structure
+AGENTIC_LANGFUSE_PSEUDONYM_KEY=&lt;random secret&gt;</code></pre>
+<p>Use one base URL consistently. If other libraries in the same process (for example an LLM gateway with its own Langfuse integration) read unprefixed <code>LANGFUSE_*</code> variables, make sure both point at the same project and region, or disable one integration. Otherwise you will get duplicate or missing traces.</p>
+
+<h2>3. Send one message</h2>
+<ol>
+  <li>Start the API with tracing enabled.</li>
+  <li>Send one chat message, for example with the local <code>make chat</code> CLI.</li>
+  <li>Open Tracing in Langfuse. A new trace should appear within a few seconds.</li>
+</ol>
+
+<h2>4. If nothing appears</h2>
+<ul>
+  <li>Check startup logs for a clear disabled reason (missing keys, tracing turned off, wrong environment). Your startup code should log one.</li>
+  <li>Check keys and base URL belong to the same project and region.</li>
+  <li>Short-lived scripts must <strong>flush</strong> before exiting. SDKs batch events in the background, and a CLI that exits immediately can lose them.</li>
+  <li>Check outbound network access from the container or VM to the Langfuse host.</li>
+  <li>Check the environment filter in the Langfuse UI matches the environment you set.</li>
+</ul>
+
+<h2>5. Then verify the shape</h2>
+<p>Open the trace and confirm: the root observation is named as you expect, generations show model and token counts, tool spans show capability ids, and no tokens, emails or other sensitive values appear anywhere. Turn that last check into a test with the in-memory exporter (see <a href="../testing-ai-dev/testing-observability.html">testing observability hooks</a>).</p>

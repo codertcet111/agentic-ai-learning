@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trace detail: IO, tokens, and model metadata | Agentic Field Notes</title>
+  <meta name="description" content="Inspect a Langfuse generation in detail: structured input and output, token breakdown including cached tokens, cost, model metadata and the scores attached to the turn.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/trace-detail-io-and-tokens.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/trace-detail-io-and-tokens.html">
+  <meta property="og:title" content="Trace detail: IO, tokens, and model metadata">
+  <meta property="og:description" content="Inspect a Langfuse generation in detail: structured input and output, token breakdown including cached tokens, cost, model metadata and the scores attached to the turn.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Trace detail: IO, tokens, and model metadata","description":"Inspect a Langfuse generation in detail: structured input and output, token breakdown including cached tokens, cost, model metadata and the scores attached to the turn.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Langfuse Lab</a> / Trace detail: IO, tokens, and model metadata</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Trace detail: IO, tokens, and model metadata</h1>
+        <p class="lead" itemprop="description">Inspect a Langfuse generation in detail: structured input and output, token breakdown including cached tokens, cost, model metadata and the scores attached to the turn.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="eval"></div>
+      <p>The detail pane for an observation is where you debug <strong>what the model actually saw</strong>, subject to your capture mode and masking.</p>
+<figure class="screenshot-figure">
+  <a href="../assets/images/langfuse/trace-detail-tokens-cost.png" class="screenshot-link" target="_blank" rel="noopener noreferrer">
+    <img src="../assets/images/langfuse/trace-detail-tokens-cost.png" alt="Langfuse observation detail with input, output, tokens, and cost" loading="lazy" decoding="async" width="1280" height="720">
+  </a>
+  <figcaption>Screenshot of trace detail pane showing generation IO, token usage, and dollar cost.</figcaption>
+</figure>
+<h2>Fields I check every time</h2>
+<ul>
+  <li><strong>Input and output</strong>: structured JSON for planner and compose calls. Check them against your Pydantic schema expectations. Was the right tool in the list? Did the output choose it?</li>
+  <li><strong>Token breakdown</strong>: input, output and, where the provider reports it, cached tokens. Rising input tokens usually mean the capability cards or the transcript window grew.</li>
+  <li><strong>Cost</strong>: per-observation cost when model prices are configured. Planner plus resolver plus compose should fit your per-turn budget.</li>
+  <li><strong>Metadata</strong>: model id, purpose (<code>plan</code>, <code>compose</code>, <code>route</code>) and, on tool spans, the capability id.</li>
+  <li><strong>Scores</strong>: automated checks attached to the trace when the turn finished (latency, call count, cost ceiling). Failed checks are easy to spot.</li>
+</ul>
+
+<h2>Debugging a wrong tool choice</h2>
+<ol>
+  <li>Open the planner generation for the turn.</li>
+  <li>In the input, find the capability list. Is the correct tool present? If not, the problem is catalog filtering, not the model.</li>
+  <li>If it is present, read its description next to the tool that was chosen. Overlapping descriptions cause most wrong choices.</li>
+  <li>Read the output's <code>intent</code> field. It often shows how the model interpreted the request.</li>
+  <li>Fix the description or policy, rerun the golden case, and compare the new generation side by side.</li>
+</ol>
+
+<h2>Reading cached tokens</h2>
+<p>If your provider supports prompt caching, a well-structured prompt shows a large share of cached input tokens on second and later calls. If cached tokens drop to zero after a change, something variable (a timestamp, a request id, a shuffled tool order) has moved into the prompt prefix and broken caching.</p>
+
+<h2>Capture modes: development versus compliance</h2>
+<p><code>structure</code> is the safest default: shapes and counts. <code>masked</code> shows text with personal entities replaced by pseudonyms, which is useful for debugging phrasing. Raw content in production should require explicit approval from whoever owns data protection, and any personal data that survives masking should raise an alert (see <a href="masking-alerts-and-failures.html">masking and failures</a>).</p>
+<nav class="post-nav" aria-label="More in this section"><a href="span-tree-and-nodes.html">← Span tree: cost and time per graph node</a><a href="turn-checks-and-budgets.html">Turn checks: automated budgets on every trace →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Cache-read tokens</dt><dd>Tokens served from provider prompt cache, usually cheaper.</dd><dt>Turn score</dt><dd>Numeric flag Langfuse stores on a trace after automated checks.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

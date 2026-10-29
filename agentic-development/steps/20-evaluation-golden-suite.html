@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 20 — Golden evals and regression gates | Agentic Field Notes</title>
+  <meta name="description" content="Freeze agent behaviour with golden JSON cases covering routing, tool choice, multi-turn flows and safety, run in CI with stubbed models and nightly against real ones.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/20-evaluation-golden-suite.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/20-evaluation-golden-suite.html">
+  <meta property="og:title" content="Step 20 — Golden evals and regression gates">
+  <meta property="og:description" content="Freeze agent behaviour with golden JSON cases covering routing, tool choice, multi-turn flows and safety, run in CI with stubbed models and nightly against real ones.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 20 — Golden evals and regression gates","description":"Freeze agent behaviour with golden JSON cases covering routing, tool choice, multi-turn flows and safety, run in CI with stubbed models and nightly against real ones.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 20</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 20 — Golden evals and regression gates</h1>
+        <p class="lead" itemprop="description">Freeze agent behaviour with golden JSON cases covering routing, tool choice, multi-turn flows and safety, run in CI with stubbed models and nightly against real ones.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>The last step closes the loop. Without evaluation, every prompt tweak, model upgrade and catalog change is a guess. With a golden suite, it is a diff.</p>
+
+<h2>What a golden case is</h2>
+<pre><code>{
+  "id": "leave.balance.basic.en",
+  "tags": ["leave", "read", "single-turn", "en"],
+  "locale": "en",
+  "principal": "fixture:employee_basic",
+  "turns": [
+    {
+      "user": "how many leave days do I have left?",
+      "expect": {
+        "route": "model",
+        "capabilities": ["leave.balance.read"],
+        "no_capabilities": ["leave.request.create"],
+        "response_contains_any": ["12", "twelve"],
+        "max_llm_calls": 3
+      }
+    }
+  ]
+}</code></pre>
+<p>One file per scenario. Each turn states the user input and expectations that can be checked mechanically: which route, which capabilities were called (and which were not), presentation mode, and limits on calls and latency.</p>
+
+<h2>What to cover</h2>
+<ul>
+  <li><strong>Routing</strong>: recipes hit exactly; near-misses go to the model.</li>
+  <li><strong>Tool choice</strong>: the right capability for common phrasings, in every supported language.</li>
+  <li><strong>Ambiguity</strong>: two matching entities lead to a choice, never a silent pick.</li>
+  <li><strong>Multi-turn flows</strong>: form, free-text supersede, resubmission.</li>
+  <li><strong>Writes</strong>: confirmation always shown; double submit creates one record.</li>
+  <li><strong>Safety</strong>: requests for other people's data refused; prompt injection in documents ignored.</li>
+</ul>
+<div class="callout">Write at least five cases for every capability that changes data. Writes are where incidents happen.</div>
+
+<h2>Two ways to run it</h2>
+<ol>
+  <li><strong>On every pull request, with a stub LLM.</strong> The stub returns the planner and compose outputs recorded in the case. This checks plumbing: routing, persistence, pending forms, provider calls against fakes. It is fast and deterministic, and needs no API keys.</li>
+  <li><strong>Nightly, with real models.</strong> The same cases run against the real model through your gateway, with fake or sandbox upstreams. This checks behaviour: does the model still choose the right tool? Results are compared with the last good run.</li>
+</ol>
+
+<h2>Assertions: exact where possible</h2>
+<p>Capability ids, routes, presentation modes and call counts are exact checks. Free text is not. For wording quality, use either "contains any of" checks for key facts or a rubric-scored judge model (see <a href="../../evaluation/llm-judges.html">LLM-as-judge</a>). Never use a judge model to decide whether a safety case passed.</p>
+
+<h2>Reports and gates</h2>
+<p>The runner writes a summary (pass/fail per case and tag) plus a diff against the previous run: which cases changed node sequence, which used more tokens, which got slower. Publish it as a Markdown or HTML artifact in CI.</p>
+<p>Gate releases on tags. Every case tagged <code>safety</code> or <code>write</code> must pass. For the rest, set a threshold and review regressions by hand.</p>
+
+<h2>Growing the suite</h2>
+<p>Every production incident becomes a case. Every confusing support ticket becomes a case. After a few months the suite is the most accurate description of what your assistant actually does, more accurate than any design document. That is the point.</p>
+<p>That completes the twenty steps. The other sections of this site go deeper into individual topics: <a href="../../graph-orchestration/index.html">graph orchestration</a>, <a href="../../data-patterns/index.html">MongoDB patterns</a>, <a href="../../evaluation/index.html">evaluation</a> and the <a href="../../langfuse-lab/index.html">Langfuse Lab</a>.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Tag at least five cases per mutating capability; writes are where incidents happen.</div><p class="meta"><a href="19-rag-knowledge-hooks.html">← Previous</a> · </p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Golden case</dt><dd>Recorded scenario with expected orchestration behavior.</dd><dt>Stub LLM</dt><dd>Deterministic model double returning canned structured output.</dd><dt>Regression gate</dt><dd>CI job that fails when behavior drifts from approved baselines.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

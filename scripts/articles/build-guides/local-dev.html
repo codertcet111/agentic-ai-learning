@@ -1,0 +1,53 @@
+<!-- desc: A local development setup for agentic backends: MongoDB and Redis in Docker Compose, sandbox upstream APIs, a stub LLM, environment files and a fast feedback loop. -->
+<p>A good local setup lets you run a full chat turn on your laptop in seconds, without production credentials and, for most work, without paying for model calls. Here is a topology that works.</p>
+
+<h2>Services</h2>
+<pre><code># docker-compose.yml
+services:
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+    command: ["--replSet", "rs0"]   # replica set enables transactions and change streams
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+  fake-upstream:
+    build: ./dev/fake_upstream      # small FastAPI app serving fixture responses
+    ports: ["8081:8081"]</code></pre>
+<p>A single-node replica set takes one extra init command (<code>rs.initiate()</code>) and gives you transactions and change streams, matching most production clusters.</p>
+
+<h2>Upstream: fake, sandbox or both</h2>
+<ul>
+  <li><strong>Fake upstream</strong>: a tiny local server returning fixture JSON for each capability, including error cases on special inputs (an employee named "Error503" returns 503). Fast, deterministic, works offline.</li>
+  <li><strong>Sandbox APIs</strong>: the real services' non-production environments with test data. Use them to check contracts before merging provider changes.</li>
+</ul>
+<p>Switch between them with configuration, never with code changes.</p>
+
+<h2>The LLM</h2>
+<ul>
+  <li><code>LLM_STUB=true</code>: canned structured outputs keyed by golden case, so there are no keys and no cost (see <a href="../llm-engineering/llm-stub-ci.html">LLM_STUB</a>).</li>
+  <li>Real models through your gateway with a development key and a low spending limit, for prompt work.</li>
+</ul>
+
+<h2>Environment file</h2>
+<pre><code># .env.local  (never committed; .env.example is)
+APP_ENV=development
+MONGO_URI=mongodb://localhost:27017/?replicaSet=rs0
+REDIS_URL=redis://localhost:6379/0
+UPSTREAM_HR_BASE_URL=http://localhost:8081
+LLM_STUB=true
+LLM_DEFAULT_MODEL=dev-small
+LANGFUSE_ENABLED=false
+DEV_FAKE_AUTH_TOKEN=Bearer dev-token-employee-basic</code></pre>
+<p>Mirror production header names exactly (<code>Authorization</code>, <code>Accept-Language</code>, <code>X-Request-Id</code>), so that code paths behave the same locally.</p>
+
+<h2>Fast loop</h2>
+<pre><code>make up          # compose services
+make dev         # run the API with reload
+make chat        # small CLI: sends a message, prints reply and node sequence
+make test        # unit + graph tests with fakes and stub LLM (seconds)
+make evals       # golden suite with stub LLM</code></pre>
+<p>The <code>make chat</code> CLI is worth the hour it takes to write. Printing the node sequence and LLM call count for each message gives you most of what a trace UI shows, right in your terminal.</p>
+
+<h2>Turn on tracing when needed</h2>
+<p>Run Langfuse locally with its Docker Compose setup, or point at a development project in Langfuse Cloud, when you are working on prompts or performance. Keep it off by default, so the inner loop stays fast. See the <a href="../langfuse-lab/local-setup-checklist.html">local setup checklist</a>.</p>

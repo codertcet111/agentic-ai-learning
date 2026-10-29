@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Traces list: spot failures and slow turns | Agentic Field Notes</title>
+  <meta name="description" content="Use the Langfuse traces list to find failed and slow agent turns after a deploy: filter by environment and time, sort by latency and cost, and search by conversation or request id.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/traces-list-and-errors.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/traces-list-and-errors.html">
+  <meta property="og:title" content="Traces list: spot failures and slow turns">
+  <meta property="og:description" content="Use the Langfuse traces list to find failed and slow agent turns after a deploy: filter by environment and time, sort by latency and cost, and search by conversation or request id.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Traces list: spot failures and slow turns","description":"Use the Langfuse traces list to find failed and slow agent turns after a deploy: filter by environment and time, sort by latency and cost, and search by conversation or request id.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Langfuse Lab</a> / Traces list: spot failures and slow turns</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Traces list: spot failures and slow turns</h1>
+        <p class="lead" itemprop="description">Use the Langfuse traces list to find failed and slow agent turns after a deploy: filter by environment and time, sort by latency and cost, and search by conversation or request id.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="eval"></div>
+      <p>The <strong>Tracing</strong> table is your shift dashboard. Filter by environment, time range and status before you open a single trace.</p>
+<figure class="screenshot-figure">
+  <a href="../assets/images/langfuse/traces-list-errors.png" class="screenshot-link" target="_blank" rel="noopener noreferrer">
+    <img src="../assets/images/langfuse/traces-list-errors.png" alt="Langfuse Tracing table with error statuses, latency, and token totals" loading="lazy" decoding="async" width="1280" height="720">
+  </a>
+  <figcaption>Screenshot of the Langfuse traces list filtered by recent activity, showing failed and slow chat turns.</figcaption>
+</figure>
+<h2>How to read this screen</h2>
+<ul>
+  <li><strong>Status / level</strong>: errors stand out from clean completions. Errors usually mean an upstream 4xx/5xx, a graph exception or a validation failure. Warnings often mean partial success or a failed automated check.</li>
+  <li><strong>Latency column</strong>: sort descending to find the slowest turns after a deploy and compare them with your turn time budget.</li>
+  <li><strong>Token and cost columns</strong>: when model prices are configured in Langfuse, cost is calculated per trace. Unusually expensive traces often reveal planner loops (many generations in one turn).</li>
+  <li><strong>Search and filters</strong>: paste a <code>conversation_id</code>, <code>request_id</code> or trace id from your structured logs, or filter on tags and metadata.</li>
+</ul>
+
+<h2>A 15-minute post-release check</h2>
+<ol>
+  <li>Filter to the production environment and the last hour, or since the release time.</li>
+  <li>Filter to errors. Group mentally by root cause: open three or four and see whether they fail in the same observation.</li>
+  <li>Clear the error filter and sort by latency. Open the slowest three and check whether the time is in LLM generations or in tool calls.</li>
+  <li>Sort by cost. Open the most expensive and count generations. More than your usual number points to replanning.</li>
+</ol>
+
+<h2>What the patterns usually mean</h2>
+<table>
+  <thead><tr><th>Pattern</th><th>Usual cause</th></tr></thead>
+  <tbody>
+    <tr><td>Many errors in the planner observation</td><td>Catalog or schema change, not the model</td></tr>
+    <tr><td>Many errors in <code>capability.invoke</code></td><td>Upstream outage, auth changes or circuit breaker open</td></tr>
+    <tr><td>Latency up, generation count unchanged</td><td>Provider latency or a slow upstream API</td></tr>
+    <tr><td>Cost up, latency up, more generations</td><td>Ambiguous tools or missing lookup results causing replanning</td></tr>
+  </tbody>
+</table>
+
+<h2>Saved views</h2>
+<p>Save the filters you use every day, such as "production errors, last 24 hours" and "slowest turns this week", so the check takes one click. Combine this with alerts on error rate, so regressions surface before QA or users report them.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="dev-workflow.html">← Langfuse workflow for AI developers</a><a href="span-tree-and-nodes.html">Span tree: cost and time per graph node →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Trace status</dt><dd>Langfuse rollup of whether the root observation ended in error.</dd><dt>Error rate</dt><dd>Percentage of traces with failed observations in a time window.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Three-layer authorization | Agentic Field Notes</title>
+  <meta name="description" content="Apply three layers of authorization in AI agents: what the planner is shown, what the orchestrator allows at invoke time and what the upstream API finally enforces.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/security-ai/three-layer-authz.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/security-ai/three-layer-authz.html">
+  <meta property="og:title" content="Three-layer authorization">
+  <meta property="og:description" content="Apply three layers of authorization in AI agents: what the planner is shown, what the orchestrator allows at invoke time and what the upstream API finally enforces.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Three-layer authorization","description":"Apply three layers of authorization in AI agents: what the planner is shown, what the orchestrator allows at invoke time and what the upstream API finally enforces.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Security for AI</a> / Three-layer authorization</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Three-layer authorization</h1>
+        <p class="lead" itemprop="description">Apply three layers of authorization in AI agents: what the planner is shown, what the orchestrator allows at invoke time and what the upstream API finally enforces.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="default"></div>
+      <p>In an agentic system, "can the user do this?" is checked in three places. Each layer has a different job, and none can replace the others.</p>
+
+<h2>Layer 1: what the planner sees</h2>
+<p>The capability list in the planner's prompt is filtered to what this user may use and what this agent covers. This is about <strong>quality and least surprise</strong>: the model does not suggest actions the user cannot take, and the prompt stays smaller. It is <em>not</em> a security boundary. A prompt can be manipulated, and the model can produce a capability id it was never shown.</p>
+
+<h2>Layer 2: what the orchestrator allows</h2>
+<p>At invoke time, the orchestrator checks, in code:</p>
+<ul>
+  <li>The capability id exists in the session's pinned catalog.</li>
+  <li>It is in the session's allowed capability list, derived from the user's roles at session creation.</li>
+  <li>It is within the current agent's scope.</li>
+  <li>If it is a write, <code>explicit_action</code> is set by the confirmation path.</li>
+</ul>
+<p>This catches planner mistakes and manipulation before any request leaves the orchestrator.</p>
+
+<h2>Layer 3: what the upstream enforces</h2>
+<p>The domain API receives the user's own credential and applies its own authorization: role checks, ownership checks, record-level rules. This is the <strong>final authority</strong>. The orchestrator's checks reduce noise and risk; the upstream's checks are what actually protect the data.</p>
+
+<h2>Why all three</h2>
+<table>
+  <thead><tr><th>Scenario</th><th>Caught by</th></tr></thead>
+  <tbody>
+    <tr><td>Model invents a capability id it was not shown</td><td>Layer 2</td></tr>
+    <tr><td>Prompt injection asks for an admin-only tool</td><td>Layer 2, and Layer 3 if it got through</td></tr>
+    <tr><td>User asks for another employee's payslip with a valid tool</td><td>Layer 3 (record-level rule)</td></tr>
+    <tr><td>Role revoked after session started</td><td>Layer 3 immediately; Layer 2 on next session refresh</td></tr>
+    <tr><td>User sees a tool they cannot use and gets confused</td><td>Layer 1</td></tr>
+  </tbody>
+</table>
+
+<h2>Record which layer said no</h2>
+<p>When a call is blocked, record the layer and reason in trace metadata and the failure record: <code>blocked_by: orchestrator, reason: not_in_session_capabilities</code>, or <code>blocked_by: upstream, status: 403</code>. Support can then tell a user "your role doesn't include that" versus "that feature isn't available in the assistant yet". Patterns in these records also reveal drift between the catalog and upstream permissions.</p>
+
+<h2>Keep session permissions fresh</h2>
+<p>Layer 2 uses permissions captured when the session started. Keep sessions reasonably short, or refresh capability snapshots every few minutes from the domain, so a revoked role stops appearing in the planner quickly. Layer 3 covers the gap in the meantime.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="token-forwarding.html">← Token forwarding, never token storage</a><a href="write-confirmation.html">Writes and explicit confirmation →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Advertised</dt><dd>Tools visible in planner context.</dd><dt>Authorized</dt><dd>Tools the principal may actually call.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

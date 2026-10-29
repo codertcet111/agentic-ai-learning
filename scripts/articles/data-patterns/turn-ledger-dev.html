@@ -1,0 +1,44 @@
+<!-- desc: A developer's guide to the turn ledger: states, transitions, idempotent replays, stuck-turn sweeps and the queries to run when a chat turn hangs or duplicates. -->
+<p>The turn ledger is the record of every user turn: when it started, what state it is in and how it ended. It is the first place to look when a user says "it's stuck" or "it did it twice". <a href="../agentic-development/steps/05-turn-admission.html">Step 5</a> covers the design. This article covers using it day to day.</p>
+
+<h2>States and transitions</h2>
+<pre><code>pending ──► running ──► completed
+               │  └───► failed      (error_class set)
+               └──────► cancelled   (user abort or superseded)
+running ──(sweeper, too old)──► failed (error_class: abandoned)</code></pre>
+<p>Transitions only move forward. Every update filters on the expected current state, so two workers can never both complete the same turn:</p>
+<pre><code>db.turn_ledger.update_one(
+    {"_id": turn_id, "status": "running"},
+    {"$set": {"status": "completed", "finished_at": now,
+              "result_message_id": msg_id}})</code></pre>
+<p>If the update matches zero documents, something else already moved the turn. Log it and stop.</p>
+
+<h2>Queries you will run</h2>
+<pre><code>// What is this conversation doing right now?
+db.turn_ledger.find({conversation_id: cid}).sort({started_at: -1}).limit(5)
+
+// Stuck turns across the system
+db.turn_ledger.find({status: "running",
+                     started_at: {$lt: new Date(Date.now() - 120000)}})
+
+// Duplicate submissions from a client
+db.turn_ledger.find({conversation_id: cid, client_request_id: rid})
+
+// Failure mix in the last hour
+db.turn_ledger.aggregate([
+  {$match: {status: "failed", finished_at: {$gt: oneHourAgo}}},
+  {$group: {_id: "$error_class", n: {$sum: 1}}}])</code></pre>
+
+<h2>"It's stuck"</h2>
+<ol>
+  <li>Find the latest ledger entry for the conversation.</li>
+  <li>If it is <code>running</code> and recent, the turn is genuinely in progress. Open its trace to see which node is slow.</li>
+  <li>If it is <code>running</code> and old, the worker probably died. The sweeper will mark it failed. Check why the worker died (deploy, out-of-memory, timeout).</li>
+  <li>If it is <code>completed</code> but the user saw nothing, the problem is delivery: streaming, client polling or a UI error.</li>
+</ol>
+
+<h2>"It did it twice"</h2>
+<p>Look for two ledger entries with different <code>client_request_id</code> values close together. That means the client sent two distinct requests, which is a UI double-submit issue. If you find two entries with the <em>same</em> id, your unique index is missing. Writes should still be protected by operation ids at the provider level (<a href="idempotency-patterns.html">idempotency patterns</a>), so check that next.</p>
+
+<h2>The sweeper</h2>
+<p>A job runs every minute, marks <code>running</code> turns older than the maximum turn duration as <code>failed</code> with <code>error_class: abandoned</code>, and clears the conversation fence so the user can continue. Alert if it sweeps more than a handful per hour, because that number tracks crashing workers.</p>

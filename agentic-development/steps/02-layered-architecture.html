@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 2 — Layer API, services, agents, providers | Agentic Field Notes</title>
+  <meta name="description" content="Stack an agentic backend as API routes, application services, graph agents and outbound providers, with imports that only point downward so each layer stays testable.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/02-layered-architecture.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/02-layered-architecture.html">
+  <meta property="og:title" content="Step 2 — Layer API, services, agents, providers">
+  <meta property="og:description" content="Stack an agentic backend as API routes, application services, graph agents and outbound providers, with imports that only point downward so each layer stays testable.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 2 — Layer API, services, agents, providers","description":"Stack an agentic backend as API routes, application services, graph agents and outbound providers, with imports that only point downward so each layer stays testable.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 2</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 2 — Layer API, services, agents, providers</h1>
+        <p class="lead" itemprop="description">Stack an agentic backend as API routes, application services, graph agents and outbound providers, with imports that only point downward so each layer stays testable.</p>
+        <p class="meta">3 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>With the orchestration boundary drawn, the next question is how to organise the orchestrator itself. A pattern that holds up well is four layers with strictly one-directional imports.</p>
+<pre><code>API routes      → transport: HTTP, auth headers, request ids, response envelopes
+Services        → use cases: admit a turn, append messages, run the graph
+Agents / graph  → behaviour: plan, resolve arguments, invoke tools, compose
+Providers       → outbound: HTTP to domain APIs, LLM gateway, retrieval
+
+Persistence and cache sit beside Services, never inside graph nodes.</code></pre>
+
+<h2>What each layer is allowed to know</h2>
+<h3>API routes</h3>
+<p>Routes parse the request, pull credentials and locale into a request context, call one service method and map the result to an HTTP response. They contain no prompt text and no Mongo queries. A route should be short enough to read in one glance.</p>
+<h3>Application services</h3>
+<p>Services coordinate a use case. "Handle a chat message" means: check the conversation is active, acquire the turn fence, append the user message, run the graph, persist the assistant message, release the fence. Services know about repositories and the graph runner, but not about HTTP frameworks.</p>
+<h3>Agents and the graph</h3>
+<p>Graph nodes decide what to do next. They read graph state, call the LLM through a gateway interface, and call capabilities through a provider interface. They do not import the web framework and do not open database connections.</p>
+<h3>Providers</h3>
+<p>Providers translate a capability call into an outbound request: build the URL, attach forwarded headers from request context, apply timeouts and circuit breakers, and turn the response into a typed result or a typed error. Providers never call the LLM and never read graph state.</p>
+
+<h2>Why one-directional imports matter</h2>
+<p>The rule is simple: a layer may import from layers below it, never above. In practice this buys three things.</p>
+<ul>
+  <li><strong>Fast tests.</strong> Graph tests run with a fake provider and a stub LLM; no HTTP server, no database. Service tests run with in-memory repositories.</li>
+  <li><strong>Replaceable edges.</strong> Moving from one LLM vendor to another, or from REST to gRPC for a domain API, touches one provider module.</li>
+  <li><strong>Readable failures.</strong> When a stack trace shows a provider error, you know it is a network or upstream problem, not prompt logic.</li>
+</ul>
+
+<h2>A practical folder layout</h2>
+<pre><code>app/
+  api/          routes.py, deps.py, errors.py
+  services/     chat_service.py, turn_admission.py
+  graph/        build.py, state.py, nodes/, routers.py
+  agents/       definitions/, policies/
+  providers/    domain_client.py, llm_gateway.py, retrieval.py
+  persistence/  collections.py, repositories/
+  cache/        redis_keys.py, catalog_cache.py
+  core/         settings.py, request_context.py, logging.py</code></pre>
+
+<h2>Enforcing the rule automatically</h2>
+<p>Code review catches most violations, but a small import check in CI catches the rest. Tools such as <code>import-linter</code> for Python let you declare layer contracts and fail the build when, for example, <code>app.graph</code> imports <code>fastapi</code>, or <code>app.providers</code> imports <code>app.graph</code>.</p>
+<pre><code>[importlinter:contract:layers]
+name = Orchestrator layers
+type = layers
+layers =
+    app.api
+    app.services
+    app.graph
+    app.providers</code></pre>
+
+<h2>Common mistakes</h2>
+<ul>
+  <li><strong>Nodes that query Mongo directly.</strong> It feels convenient, but it couples graph logic to storage and makes checkpoints harder to reason about. Pass repositories in through the graph config instead.</li>
+  <li><strong>Providers that format user messages.</strong> Wording belongs to compose. Providers return data and error codes.</li>
+  <li><strong>Settings imported everywhere.</strong> Read settings once at startup and inject the values that each layer needs.</li>
+</ul>
+<p>The layering is not about purity. It is about making sure that when something breaks at 2 a.m., the stack trace tells you which kind of problem you have.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Draw imports on a whiteboard; any arrow from providers to agents is a bug.</div><p class="meta"><a href="01-orchestration-plane.html">← Previous</a> · <a href="03-request-context.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Application service</dt><dd>Use-case layer that coordinates persistence, cache, and graph execution.</dd><dt>Provider</dt><dd>Adapter that translates a capability call into an upstream HTTP request.</dd><dt>Capability</dt><dd>A catalog entry describing one tool: id, schema, provider, and side-effect class.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

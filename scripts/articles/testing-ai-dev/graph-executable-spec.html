@@ -1,0 +1,40 @@
+<!-- desc: Treat agent graph tests as an executable specification: routing, pending form resume, supersede and error paths described as fast pytest cases with a stub LLM and fakes. -->
+<p>Product managers, support engineers and new developers all ask the same kind of question: "What happens if the user does X while Y?" In a well-tested agent, the answer is a test name. A graph test module written as an executable specification is the most useful documentation an agent codebase can have.</p>
+
+<h2>Name tests as behaviour</h2>
+<pre><code>def test_free_text_while_form_open_supersedes_form_and_starts_new_turn(): ...
+def test_form_submission_with_stale_revision_is_rejected_with_current_form(): ...
+def test_write_capability_always_requests_confirmation_before_invoke(): ...
+def test_two_lookup_matches_produce_choice_not_auto_selection(): ...
+def test_upstream_503_produces_service_busy_reply_and_failure_record(): ...
+def test_recipe_reset_never_calls_llm(): ...</code></pre>
+<p>Someone reading only the names understands the system's rules. Use full sentences, even if the names get long.</p>
+
+<h2>Structure of a graph test</h2>
+<pre><code>async def test_two_lookup_matches_produce_choice_not_auto_selection(graph_env):
+    graph_env.upstream.respond("employees.search", TWO_SARAS)
+    graph_env.llm.script(plan=[
+        plan_call("employees.search", intent="find approver Sara"),
+        plan_need_input(missing=["approver_id"]),
+    ])
+
+    result = await graph_env.run_turn("book Friday off, approver Sara")
+
+    assert graph_env.node_sequence() == ["load_session", "route", "plan",
+                                         "resolve", "invoke", "plan", "ask"]
+    pi = graph_env.pending_interaction()
+    assert pi.kind == "choice" and len(pi.options) == 2
+    assert graph_env.upstream.calls("leave.request.create") == 0</code></pre>
+<p>The <code>graph_env</code> fixture wires the compiled graph with in-memory repositories, a fake upstream and a scripted stub LLM. Each test runs in milliseconds.</p>
+
+<h2>What belongs in the spec</h2>
+<ul>
+  <li>Every conditional edge, with each outcome.</li>
+  <li>Pause and resume: form, choice, confirmation, expiry, supersede.</li>
+  <li>Every error class from providers, mapped to the right reply.</li>
+  <li>Limits: max planner calls, recursion limit, turn timeout.</li>
+  <li>Recipes: each one, plus a near-miss that goes to the model.</li>
+</ul>
+
+<h2>Keep it truthful</h2>
+<p>A spec is only useful if it is current. Make it a rule that behaviour changes to the graph come with a test change in the same pull request. When a test is deleted, the review should ask which behaviour is being removed.</p>

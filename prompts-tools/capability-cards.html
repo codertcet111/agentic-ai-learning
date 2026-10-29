@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Writing capability cards for planners | Agentic Field Notes</title>
+  <meta name="description" content="Write capability cards (tool descriptions) that LLM planners follow reliably: clear identity, when and when not to use, parameter docs, side-effect class and examples.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/prompts-tools/capability-cards.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/prompts-tools/capability-cards.html">
+  <meta property="og:title" content="Writing capability cards for planners">
+  <meta property="og:description" content="Write capability cards (tool descriptions) that LLM planners follow reliably: clear identity, when and when not to use, parameter docs, side-effect class and examples.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Writing capability cards for planners","description":"Write capability cards (tool descriptions) that LLM planners follow reliably: clear identity, when and when not to use, parameter docs, side-effect class and examples.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Prompts &amp; Tools</a> / Writing capability cards for planners</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Writing capability cards for planners</h1>
+        <p class="lead" itemprop="description">Write capability cards (tool descriptions) that LLM planners follow reliably: clear identity, when and when not to use, parameter docs, side-effect class and examples.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>A capability card is everything the planner knows about a tool. The model cannot read your code or your API docs; it reads the card. Most wrong-tool bugs are card bugs.</p>
+
+<h2>Anatomy of a good card</h2>
+<pre><code>id: leave.balance.read
+summary: Get the current employee's remaining leave days by leave type.
+use_when: The user asks how much leave they have, have left, or can take.
+do_not_use_when: The user asks about leave policy rules in general
+  (use knowledge.search) or about another employee's leave.
+side_effect: read
+parameters:
+  leave_type:
+    type: string, optional, enum [annual, sick, unpaid]
+    description: Omit to return all types.
+returns: List of {leave_type, remaining_days, as_of_date}.</code></pre>
+<ul>
+  <li><strong>summary</strong>: one sentence, starting with a verb, saying exactly what it does.</li>
+  <li><strong>use_when / do_not_use_when</strong>: the most effective lines on the card. Negative guidance separates tools that would otherwise overlap.</li>
+  <li><strong>parameter descriptions</strong>: formats, defaults and what happens when omitted.</li>
+  <li><strong>side_effect</strong>: read, write or destructive. The graph uses this for confirmation rules, and the model uses it to be cautious.</li>
+  <li><strong>returns</strong>: a brief shape, so the planner knows whether a follow-up call is needed.</li>
+</ul>
+
+<h2>Disambiguate siblings</h2>
+<p>Tools that sound alike are the main source of errors: <code>orders.search</code> versus <code>orders.get</code>, <code>leave.balance.read</code> versus <code>knowledge.search</code>. For each pair, make sure each card names the other in <code>do_not_use_when</code>. Then check with golden cases that use phrasings close to the boundary.</p>
+
+<h2>Keep the list short</h2>
+<p>Accuracy drops as the number of tools in the prompt grows, especially when many are similar. Rather than one agent with sixty tools, split by domain into sub-agents with a dozen each (see <a href="../graph-orchestration/multi-agent.html">multi-agent delegation</a>), and filter per user so that tools a user cannot use never appear.</p>
+
+<h2>Write for the model, not the API</h2>
+<p>Upstream catalog descriptions are often written for developers ("Returns LeaveBalanceDTO[] for principal"). Keep an orchestrator-side override for the summary and guidance fields, so you can tune wording for the planner without asking the API team to change their docs.</p>
+
+<h2>Test cards like code</h2>
+<p>Every card change can shift tool selection for other tools. Run the routing and tool-choice golden cases on any pull request that touches a card, and review the trace diff. Card edits are prompt edits.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="planner-policy.html">Planner policy without prompt soup →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Capability card</dt><dd>Planner-facing description of one tool.</dd><dt>Side-effect class</dt><dd>Label indicating read-only vs mutating behavior.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

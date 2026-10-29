@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security for AI | Agentic Field Notes</title>
+  <meta name="description" content="Threat models and patterns for auth-forwarding orchestrators.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/security-ai/">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/security-ai/">
+  <meta property="og:title" content="Security for AI">
+  <meta property="og:description" content="Threat models and patterns for auth-forwarding orchestrators.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Security for AI","description":"Threat models and patterns for auth-forwarding orchestrators.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / Security for AI</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Security for AI</h1>
+        <p class="lead" itemprop="description">Threat models and patterns for auth-forwarding orchestrators.</p>
+        
+      </header>
+      
+      <p>Threat models and patterns for auth-forwarding orchestrators.</p><ul class="step-list"><li><a href="token-forwarding.html"><span class="step-num">01</span><span><strong>Token forwarding, never token storage</strong><br><small>Secure an AI orchestrator with token forwarding instead of token storage: per-request context, no shared cookie jars, scoped outbound calls and redaction at every exit.</small></span></a></li><li><a href="three-layer-authz.html"><span class="step-num">02</span><span><strong>Three-layer authorization</strong><br><small>Apply three layers of authorization in AI agents: what the planner is shown, what the orchestrator allows at invoke time and what the upstream API finally enforces.</small></span></a></li><li><a href="write-confirmation.html"><span class="step-num">03</span><span><strong>Writes and explicit confirmation</strong><br><small>Protect data-changing actions in AI assistants with explicit confirmation: graph-enforced confirmation steps, fingerprints, explicit action flags and operation ids against duplicates.</small></span></a></li><li><a href="eval-trace-signing.html"><span class="step-num">04</span><span><strong>Signed eval traces</strong><br><small>Sign automated evaluation traffic so CI runs can be identified, routed to experiment traces and given test-only behaviour, without exposing signing keys to production.</small></span></a></li></ul>
+      
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

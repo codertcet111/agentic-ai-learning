@@ -1,0 +1,39 @@
+<!-- desc: Keep LangGraph state small by storing large tool results by reference, summarizing for the planner and measuring checkpoint size, so resumes stay fast and cheap. -->
+<p>Graph state is convenient. Anything a node returns is available to every later node, survives pauses, and appears in debugging tools. That convenience is exactly why state tends to grow until it hurts.</p>
+
+<h2>Why size matters</h2>
+<ul>
+  <li><strong>Checkpoint writes.</strong> State is serialized after every step. A 300&nbsp;KB search result held in state is written five or six times in one turn.</li>
+  <li><strong>Resume latency.</strong> Loading and deserializing a large checkpoint adds latency to every form submission.</li>
+  <li><strong>Prompt bloat.</strong> Nodes tend to pass "the state" to the LLM. Large state means large prompts and higher cost.</li>
+  <li><strong>Trace exports.</strong> If state is attached to spans, it is uploaded too.</li>
+</ul>
+
+<h2>Store by reference</h2>
+<p>When a capability returns a large payload, write it to <code>step_results</code> and keep a reference and a summary in state:</p>
+<pre><code>result = await provider.invoke(cap, args, ctx)
+sr_id = await step_results.insert(turn_id, cap.id, result.data)
+summary = summarize_for_planner(cap, result.data)   # deterministic, small
+
+return {
+    "step_result_ids": [sr_id],
+    "observations": [{"capability": cap.id, "summary": summary, "ref": sr_id}],
+}</code></pre>
+<p>The summarizer is code, not an LLM: row counts, key fields of the first few rows, totals. The planner rarely needs all 200 rows to decide what to do next. Compose and presentation, which do need the rows, load them by id.</p>
+
+<h2>What belongs in state</h2>
+<table>
+  <thead><tr><th>Keep</th><th>Move out</th></tr></thead>
+  <tbody>
+    <tr><td>Ids: conversation, turn, pending interaction</td><td>Full tool responses</td></tr>
+    <tr><td>The current plan and resolved arguments</td><td>Retrieved document chunks</td></tr>
+    <tr><td>Short observation summaries</td><td>Transcript history (load from messages)</td></tr>
+    <tr><td>Flags and counters</td><td>Credentials and headers (request context)</td></tr>
+  </tbody>
+</table>
+
+<h2>Measure it</h2>
+<p>Add a cheap check after each node in development: serialize the state and log its size. Put a soft limit on it (say 32&nbsp;KB) that logs a warning, and a test that fails if any golden case exceeds a hard limit. Size regressions are easy to fix the day they are introduced and tedious to track down later.</p>
+
+<h2>Reducers can grow forever</h2>
+<p>List fields with an append reducer, such as <code>lookup_trace</code> or <code>observations</code>, grow with every loop iteration. Cap them: keep the last N entries, or drop raw results once a summary exists. Per-turn thread ids (see <a href="checkpointing.html">checkpointing</a>) also reset them naturally at the start of each turn.</p>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 11 — Wire LangGraph with a checkpointer | Agentic Field Notes</title>
+  <meta name="description" content="Wire a LangGraph StateGraph with typed state, async nodes, pure routing functions and a MongoDB checkpointer, compiled once at application startup.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/11-langgraph-skeleton.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/11-langgraph-skeleton.html">
+  <meta property="og:title" content="Step 11 — Wire LangGraph with a checkpointer">
+  <meta property="og:description" content="Wire a LangGraph StateGraph with typed state, async nodes, pure routing functions and a MongoDB checkpointer, compiled once at application startup.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 11 — Wire LangGraph with a checkpointer","description":"Wire a LangGraph StateGraph with typed state, async nodes, pure routing functions and a MongoDB checkpointer, compiled once at application startup.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 11</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 11 — Wire LangGraph with a checkpointer</h1>
+        <p class="lead" itemprop="description">Wire a LangGraph StateGraph with typed state, async nodes, pure routing functions and a MongoDB checkpointer, compiled once at application startup.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>With storage, context and providers in place, the graph itself is a fairly small piece of code. The aim of the skeleton is to keep it that way: typed state, plain async functions as nodes, pure functions as routers, and a checkpointer so runs survive restarts and pauses.</p>
+
+<h2>Typed state</h2>
+<pre><code>from typing import TypedDict, Literal, Annotated
+import operator
+
+class GraphState(TypedDict, total=False):
+    conversation_id: str
+    turn_id: str
+    user_text: str
+    plan: dict | None
+    arguments: dict | None
+    lookup_trace: Annotated[list[dict], operator.add]
+    step_result_ids: Annotated[list[str], operator.add]
+    pending_interaction_id: str | None
+    response: dict | None
+    response_finalized: bool
+    error: dict | None</code></pre>
+<p>The <code>Annotated[..., operator.add]</code> fields are reducers: when a node returns a list for that key, LangGraph appends it rather than replacing it. Use reducers for accumulating traces. Use plain fields for values that should be overwritten.</p>
+<p>Notice what is absent: tokens, headers, raw tool payloads. Those live in request context and in <code>step_results</code>.</p>
+
+<h2>Nodes and routers</h2>
+<pre><code>async def plan_next_step(state: GraphState, config) -&gt; dict:
+    deps = config["configurable"]["deps"]
+    plan = await deps.planner.plan(state, config["configurable"]["request_context"])
+    return {"plan": plan.model_dump()}
+
+def after_plan(state: GraphState) -&gt; Literal["resolve", "ask", "compose"]:
+    kind = state["plan"]["kind"]
+    return {"call_tool": "resolve", "need_input": "ask"}.get(kind, "compose")</code></pre>
+<p>Nodes return partial state updates. Routers read state and return the next node's name. Routers never call the LLM, never write state and never perform I/O. That keeps every edge in the graph testable with a plain dictionary.</p>
+
+<h2>Building and compiling</h2>
+<pre><code>from langgraph.graph import StateGraph, START, END
+
+def build_graph(checkpointer):
+    g = StateGraph(GraphState)
+    g.add_node("load_session", load_session)
+    g.add_node("plan", plan_next_step)
+    g.add_node("resolve", resolve_arguments)
+    g.add_node("invoke", invoke_capability)
+    g.add_node("ask", request_input)
+    g.add_node("compose", compose_response)
+
+    g.add_edge(START, "load_session")
+    g.add_edge("load_session", "plan")
+    g.add_conditional_edges("plan", after_plan)
+    g.add_edge("resolve", "invoke")
+    g.add_edge("invoke", "plan")       # replan with new results
+    g.add_edge("ask", END)
+    g.add_edge("compose", END)
+    return g.compile(checkpointer=checkpointer)</code></pre>
+
+<h2>Compile once</h2>
+<p>Compile the graph in the application startup hook, after repositories and the checkpointer exist, and store it on the app. Compiling per request wastes CPU and, more importantly, hides configuration mistakes until the first user hits them. Compile-time failures at startup are the cheapest kind.</p>
+
+<h2>Checkpointer and thread ids</h2>
+<p>LangGraph offers a MongoDB checkpointer (<code>langgraph-checkpoint-mongodb</code>) along with Postgres and others. Each run uses a <code>thread_id</code> in its config to identify the checkpoint lineage. Use a value that identifies the workflow, typically the turn id or the pending interaction's origin turn. Do not encode tenant or user ids in it, and never auth.</p>
+<pre><code>result = await app.state.graph.ainvoke(
+    {"conversation_id": cid, "turn_id": tid, "user_text": text},
+    config={"configurable": {
+        "thread_id": tid,
+        "request_context": ctx,
+        "deps": deps,
+    }},
+)</code></pre>
+
+<h2>Bounding the loop</h2>
+<p>The <code>invoke → plan</code> edge creates a loop. Set <code>recursion_limit</code> in the run config to a sensible ceiling (for example 12 steps), and also count planner calls in state so compose can explain gracefully when a turn needed too many steps. Either limit firing in production is a signal worth alerting on.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Compile graph once; if compile runs per request, you have a performance incident waiting.</div><p class="meta"><a href="10-providers-invoke.html">← Previous</a> · <a href="12-graph-nodes-flow.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>StateGraph</dt><dd>LangGraph structure of nodes and conditional edges.</dd><dt>Checkpointer</dt><dd>Saver that writes graph state snapshots between nodes.</dd><dt>Thread id</dt><dd>Stable key grouping checkpoints for one workflow lineage.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Freshness and re-indexing | Agentic Field Notes</title>
+  <meta name="description" content="Keep a RAG index fresh: detect document changes with content hashes, re-embed only changed chunks, version documents atomically and handle deletions and model upgrades.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/rag-knowledge/freshness.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/rag-knowledge/freshness.html">
+  <meta property="og:title" content="Freshness and re-indexing">
+  <meta property="og:description" content="Keep a RAG index fresh: detect document changes with content hashes, re-embed only changed chunks, version documents atomically and handle deletions and model upgrades.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Freshness and re-indexing","description":"Keep a RAG index fresh: detect document changes with content hashes, re-embed only changed chunks, version documents atomically and handle deletions and model upgrades.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">RAG &amp; Knowledge</a> / Freshness and re-indexing</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Freshness and re-indexing</h1>
+        <p class="lead" itemprop="description">Keep a RAG index fresh: detect document changes with content hashes, re-embed only changed chunks, version documents atomically and handle deletions and model upgrades.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="rag"></div>
+      <p>A retrieval system that answers from last quarter's policy is worse than one that says "I don't know". Users trust the citation and act on it. Freshness is about making sure the index follows the source documents closely and visibly.</p>
+
+<h2>Know your sources</h2>
+<p>For each collection, record where documents come from and how you learn about changes:</p>
+<table>
+  <thead><tr><th>Source</th><th>Change signal</th><th>Sync strategy</th></tr></thead>
+  <tbody>
+    <tr><td>CMS or intranet</td><td>Webhook on publish</td><td>Re-index the single document on event</td></tr>
+    <tr><td>SharePoint / Google Drive</td><td>Change feed or modified time</td><td>Poll every few minutes for changes</td></tr>
+    <tr><td>Git-hosted docs</td><td>Commits</td><td>CI job on merge to main</td></tr>
+    <tr><td>Files with no API</td><td>None</td><td>Nightly full scan with hashes</td></tr>
+  </tbody>
+</table>
+
+<h2>Hash to skip unchanged work</h2>
+<p>Embedding costs money and time. Compute a hash of each document's normalized text. If it matches the stored hash, skip it. When it differs, chunk the new version and hash each chunk. Chunks whose hash already exists can reuse their stored embedding, and only new or changed chunks get embedded. For a policy where one paragraph changed, that means re-embedding one or two chunks, not forty.</p>
+
+<h2>Swap versions atomically</h2>
+<ol>
+  <li>Write the new version's chunks with <code>document_version = n + 1</code> and <code>active: false</code>.</li>
+  <li>When all are written and embedded, set <code>active: true</code> on version <code>n + 1</code> and <code>active: false</code> on version <code>n</code>.</li>
+  <li>Delete inactive versions after a grace period.</li>
+</ol>
+<p>Queries always filter on <code>active: true</code>, so users never see a mix of old and new chunks from the same document.</p>
+
+<h2>Deletions</h2>
+<p>Deleted source documents are the most commonly missed case. A withdrawn policy that is still in the index will keep being cited. Full scans should compare the set of document ids in the source with the set in the index and deactivate anything missing. Event-based syncs need to handle delete events explicitly.</p>
+
+<h2>Show freshness to users</h2>
+<p>Include the document's last-modified date in citations: "Annual Leave Policy (updated 3 Sep 2026)". Users can judge for themselves, and it encourages document owners to keep sources current.</p>
+
+<h2>Monitor lag</h2>
+<p>Track, per collection, the time between a source change and the index reflecting it, and the age of the most recent sync. Alert if a sync has not succeeded within twice its expected interval. A silently broken sync job is the usual way an index goes stale.</p>
+
+<h2>Embedding model upgrades</h2>
+<p>A new embedding model means re-embedding everything, because vectors from different models are not comparable. Build the new index alongside the old one, run your retrieval evaluation against both, switch query traffic when the new one is at least as good, then remove the old one.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="retrieval-api.html">← Expose retrieval as a tool</a><a href="safety.html">RAG safety and ACL →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Re-embed</dt><dd>Recompute vectors after text changes.</dd><dt>Content hash</dt><dd>Fingerprint detecting document edits.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

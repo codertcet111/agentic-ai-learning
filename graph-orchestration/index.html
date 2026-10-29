@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph &amp; Orchestration | Agentic Field Notes</title>
+  <meta name="description" content="LangGraph patterns, routing functions, and multi-agent handoffs—explained for builders.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/">
+  <meta property="og:title" content="Graph &amp; Orchestration">
+  <meta property="og:description" content="LangGraph patterns, routing functions, and multi-agent handoffs—explained for builders.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Graph &amp; Orchestration","description":"LangGraph patterns, routing functions, and multi-agent handoffs—explained for builders.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / Graph &amp; Orchestration</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Graph &amp; Orchestration</h1>
+        <p class="lead" itemprop="description">LangGraph patterns, routing functions, and multi-agent handoffs—explained for builders.</p>
+        
+      </header>
+      
+      <p>LangGraph patterns, routing functions, and multi-agent handoffs—explained for builders.</p><ul class="step-list"><li><a href="conditional-routing.html"><span class="step-num">01</span><span><strong>Conditional routing without side effects</strong><br><small>Write LangGraph routing functions as pure selectors that read state and return the next node, so graph diagrams stay truthful and every edge is unit-testable.</small></span></a></li><li><a href="checkpointing.html"><span class="step-num">02</span><span><strong>Checkpointing and recovery</strong><br><small>How LangGraph checkpoints work, how to persist them in MongoDB, how to resume after crashes or pauses, and how to keep checkpoint size and retention under control.</small></span></a></li><li><a href="multi-agent.html"><span class="step-num">03</span><span><strong>Multi-agent delegation</strong><br><small>Structure multi-agent systems with a registry of agent cards, capability subsets per agent, a router that hands off ownership and one shared turn pipeline.</small></span></a></li><li><a href="human-in-the-loop.html"><span class="step-num">04</span><span><strong>Human-in-the-loop pauses</strong><br><small>Design human-in-the-loop pauses for approvals and forms with durable pending state, expiry, fingerprints against stale UI and clear transition messages.</small></span></a></li><li><a href="debugging-with-traces.html"><span class="step-num">05</span><span><strong>Debugging graph bugs with traces</strong><br><small>A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.</small></span></a></li><li><a href="state-size.html"><span class="step-num">06</span><span><strong>Keeping GraphState small</strong><br><small>Keep LangGraph state small by storing large tool results by reference, summarizing for the planner and measuring checkpoint size, so resumes stay fast and cheap.</small></span></a></li></ul>
+      
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

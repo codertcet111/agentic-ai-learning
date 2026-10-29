@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 7 — Append messages, don&#x27;t mutate arrays | Agentic Field Notes</title>
+  <meta name="description" content="Store chat transcripts as append-only message documents with a per-conversation sequence and idempotency keys instead of growing arrays inside one document.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/07-messages-transcripts.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/07-messages-transcripts.html">
+  <meta property="og:title" content="Step 7 — Append messages, don&#x27;t mutate arrays">
+  <meta property="og:description" content="Store chat transcripts as append-only message documents with a per-conversation sequence and idempotency keys instead of growing arrays inside one document.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 7 — Append messages, don&#x27;t mutate arrays","description":"Store chat transcripts as append-only message documents with a per-conversation sequence and idempotency keys instead of growing arrays inside one document.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 7</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 7 — Append messages, don&#x27;t mutate arrays</h1>
+        <p class="lead" itemprop="description">Store chat transcripts as append-only message documents with a per-conversation sequence and idempotency keys instead of growing arrays inside one document.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>The tempting first design stores a conversation as one document with a <code>messages</code> array. It works until it does not: the 16&nbsp;MB document limit, write conflicts when two writers push at once, and expensive rewrites of the whole document for every new message.</p>
+<p>The design that scales is one document per message, appended and never edited.</p>
+
+<h2>Message document</h2>
+<pre><code>{
+  "_id": "msg_…",
+  "conversation_id": "cnv_…",
+  "sequence": 27,
+  "role": "assistant",                 // user | assistant | system | tool
+  "turn_id": "trn_…",
+  "idempotency_key": null,
+  "content": {
+    "text": "You have 12 leave days left this year.",
+    "blocks": [
+      {"type": "table", "columns": ["Type", "Days"],
+       "rows": [["Annual", 12], ["Sick", 5]]}
+    ]
+  },
+  "tool_calls": [{"id": "tc_1", "capability": "leave.balance.read",
+                  "step_result_id": "sr_…"}],
+  "created_at": "…"
+}</code></pre>
+<ul>
+  <li><strong>sequence</strong> is a per-conversation counter. Ordering by it gives a deterministic transcript, regardless of clock skew between servers.</li>
+  <li><strong>content.blocks</strong> holds structured UI elements (tables, cards, forms) separately from plain text, so clients can render them natively and accessibility tools still get readable text.</li>
+  <li><strong>tool_calls</strong> link to <code>step_results</code> by id instead of embedding large payloads.</li>
+</ul>
+
+<h2>Allocating sequence numbers</h2>
+<p>Because turns are fenced (step 5), only one writer appends to a conversation at a time, so you can safely allocate the next sequence from the conversation document:</p>
+<pre><code>conv = conversations.find_one_and_update(
+    {"_id": cid, "active_turn_id": turn_id},
+    {"$inc": {"message_count": 1}},
+    return_document=ReturnDocument.AFTER)
+seq = conv["message_count"]
+messages.insert_one({..., "sequence": seq})</code></pre>
+<p>The unique index on <code>(conversation_id, sequence)</code> is the safety net. If a bug ever lets two writers in, one insert fails loudly instead of silently interleaving.</p>
+
+<h2>Idempotent appends</h2>
+<p>User messages carry a client-generated <code>idempotency_key</code>. A retry with the same key hits the partial unique index and you return the existing message instead of creating a duplicate. This is what lets a mobile app queue messages offline and replay them safely.</p>
+
+<h2>Why never update</h2>
+<p>Append-only storage makes three things simple:</p>
+<ul>
+  <li><strong>Audit.</strong> What the user saw is exactly what is stored.</li>
+  <li><strong>Replay.</strong> You can rebuild the LLM context for any past turn by reading messages up to that turn's sequence.</li>
+  <li><strong>Sync.</strong> Clients fetch "messages after sequence N" and never need to diff.</li>
+</ul>
+<p>When something must change, such as a user deleting a message or an admin redacting content, append a tombstone or redaction event and let readers apply it. For legal deletion requests, a separate job removes content fields and keeps the skeleton.</p>
+
+<h2>Reading for the model</h2>
+<p>The transcript you store is not the transcript you send to the LLM. A window builder reads the last N messages by sequence, drops UI-only blocks, swaps tool results for short summaries and stays within a token budget. Keeping storage and prompt construction separate means you can change the window strategy without migrating data. See <a href="../../llm-engineering/token-window-management.html">token window management</a>.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Never UPDATE message documents; append-only makes replay and audit trivial.</div><p class="meta"><a href="06-mongo-collections-map.html">← Previous</a> · <a href="08-pending-interactions.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Idempotency key</dt><dd>Client-supplied token so retries do not duplicate messages.</dd><dt>Sequence</dt><dd>Monotonic integer establishing deterministic transcript order.</dd><dt>Payload</dt><dd>Structured message body including tool calls and UI metadata.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

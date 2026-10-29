@@ -1,0 +1,43 @@
+<!-- desc: A day-to-day Langfuse workflow for AI developers: one trace per chat turn, consistent observation names, safe capture modes, release tags and linking traces to logs. -->
+<p>When you ship an agentic backend, logs alone are not enough. You need <strong>one trace per user turn</strong> that shows routing, each graph step, every LLM call and every tool invoke, with latency, token usage and cost rolled up. Langfuse is an open-source LLM engineering platform built for exactly this, and this section of the site is a practical tour of using it while developing an agent.</p>
+
+<h2>What I set up before debugging any prompt</h2>
+<ol>
+  <li><strong>Tracing in non-production first</strong>, with a <code>structure</code> capture mode: names, shapes, counts and timings, but no raw user text. Turn on richer capture only where your privacy review allows it.</li>
+  <li><strong>Tags and metadata on every trace</strong>: environment, release, <code>conversation_id</code>, <code>turn_id</code> and <code>request_id</code>, so support can jump from a log line to a trace.</li>
+  <li><strong>Consistent observation names</strong>: the root turn, router, each agent step, <code>llm.call</code> and <code>capability.invoke</code>. Charts and filters depend on these names, so pick them once.</li>
+  <li><strong>Eval runs in the same project</strong>, tagged or signed so they can be told apart from user traffic, so CI traces can be compared with real ones.</li>
+</ol>
+<div class="callout"><strong>Dev tip:</strong> correlate <code>X-Request-Id</code> from API logs with the trace in Langfuse before you touch prompt wording. Half the time the problem is in a tool call, not the prompt.</div>
+
+<h2>The shape of a good trace</h2>
+<pre><code>chat-turn                          (root: total latency, total cost, failure_reason)
+├── route-request
+│   └── llm.call  purpose=route    (small model)
+├── agent-step: plan
+│   └── llm.call  purpose=plan
+├── agent-step: invoke
+│   └── capability.invoke  leave.balance.read  (status 200, 180 ms)
+├── agent-step: plan
+│   └── llm.call  purpose=plan
+└── agent-step: compose
+    └── llm.call  purpose=compose</code></pre>
+<p>Langfuse models these as observations of different types. LLM calls are <em>generations</em>, which carry model, token usage and cost. Other steps are spans. With this shape, the trace view answers "where did the time and money go?" at a glance.</p>
+
+<h2>My daily loop</h2>
+<ol>
+  <li>Make a change: prompt, tool description or graph node.</li>
+  <li>Run a handful of golden cases locally against a real model with tracing on.</li>
+  <li>Open the newest traces and check the node sequence, number of LLM calls and token counts against yesterday's traces for the same cases.</li>
+  <li>If something regressed, open the specific generation and read the input the model actually received.</li>
+</ol>
+
+<h2>The pages in this lab</h2>
+<ul>
+  <li><a href="traces-list-and-errors.html">Traces list</a>: finding failed and slow turns.</li>
+  <li><a href="span-tree-and-nodes.html">Span tree</a>: cost and time per graph node.</li>
+  <li><a href="trace-detail-io-and-tokens.html">Trace detail</a>: inputs, outputs, tokens and model metadata.</li>
+  <li><a href="turn-checks-and-budgets.html">Turn checks</a>: automated budgets as scores.</li>
+  <li><a href="masking-alerts-and-failures.html">Masking and failures</a>: privacy-safe export and failure reasons.</li>
+  <li><a href="local-setup-checklist.html">Local setup</a>: getting your first trace.</li>
+</ul>

@@ -1,0 +1,36 @@
+<!-- desc: Teach AI agents to look up entity ids instead of guessing: lookup tools, a lookup trace in state, replanning with candidates and asking the user when results are ambiguous. -->
+<p>Language models are very good at producing plausible identifiers. <code>emp_1042</code> looks like a real employee id whether or not it is one. Any agent that lets the model write ids directly will eventually act on an invented or wrong one. The fix is a firm habit: <strong>look up, don't guess</strong>.</p>
+
+<h2>The pattern</h2>
+<ol>
+  <li>A capability needs an entity id (employee, order, project).</li>
+  <li>The planner calls a lookup capability with what the user said: a name, a description, a partial number.</li>
+  <li>The full lookup result is appended to <code>lookup_trace</code> in state.</li>
+  <li>The planner runs again with the candidates in view, and either picks the clear match or asks the user to choose.</li>
+  <li>Validation checks that the chosen id appears in <code>lookup_trace</code> or an earlier tool result.</li>
+</ol>
+
+<h2>Policy wording</h2>
+<pre><code>When a tool parameter is an id for a person, order or other record:
+- Never write an id that you have not seen in a tool result in this turn.
+- Call the matching search tool with the user's description.
+- If exactly one result clearly matches, use its id.
+- If several results could match, return need_input listing them.
+- If none match, tell the user and ask for more detail.</code></pre>
+
+<h2>Enforce it in code too</h2>
+<p>The policy makes the right behaviour likely. Validation makes the wrong behaviour impossible:</p>
+<pre><code>@field_validator("arguments")
+def ids_must_be_seen(cls, args, info):
+    seen = info.context["seen_ids"]          # from lookup_trace and step results
+    for name, value in args.items():
+        if name.endswith("_id") and value not in seen:
+            raise ValueError(f"{name}={value} was not returned by any lookup")
+    return args</code></pre>
+<p>A rejected id triggers the repair path, and the repair prompt explains which ids are valid.</p>
+
+<h2>Don't shortcut in the resolver</h2>
+<p>A common shortcut is to write resolver code that runs the lookup and takes the first result, "because there's usually only one". This hides ambiguity from both the model and the user, and fails silently in exactly the cases that matter: two people with the same name, two orders on the same day. Resolvers may run lookups. They must not choose.</p>
+
+<h2>Make choices pleasant</h2>
+<p>When the planner asks the user to choose, show a choice interaction with enough context to decide, such as name with department, or order number with date and total, not a bare list of ids. A good choice UI turns ambiguity into a single tap.</p>

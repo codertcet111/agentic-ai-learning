@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 19 — Add RAG without breaking the graph | Agentic Field Notes</title>
+  <meta name="description" content="Add retrieval-augmented generation to an agent graph as a capability or a dedicated sub-agent, with citations, permission filtering and evaluation before launch.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/19-rag-knowledge-hooks.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/19-rag-knowledge-hooks.html">
+  <meta property="og:title" content="Step 19 — Add RAG without breaking the graph">
+  <meta property="og:description" content="Add retrieval-augmented generation to an agent graph as a capability or a dedicated sub-agent, with citations, permission filtering and evaluation before launch.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 19 — Add RAG without breaking the graph","description":"Add retrieval-augmented generation to an agent graph as a capability or a dedicated sub-agent, with citations, permission filtering and evaluation before launch.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 19</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 19 — Add RAG without breaking the graph</h1>
+        <p class="lead" itemprop="description">Add retrieval-augmented generation to an agent graph as a capability or a dedicated sub-agent, with citations, permission filtering and evaluation before launch.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>Sooner or later users ask questions that no API answers: "What's the policy on carrying over leave?", "How do I claim travel expenses?" The answer lives in documents. Retrieval-augmented generation (RAG) brings those documents into the conversation. Done carelessly, it also brings slow turns, huge prompts and confident misquotes. This step adds it without breaking the graph.</p>
+
+<h2>Option 1: retrieval as a capability</h2>
+<p>Expose search as a normal read capability:</p>
+<pre><code>{
+  "id": "knowledge.search",
+  "summary": "Search company policy documents. Use for questions about rules, procedures and entitlements, not for the user's own data.",
+  "side_effect": "read",
+  "parameters": {
+    "type": "object",
+    "required": ["query"],
+    "properties": {
+      "query":      {"type": "string"},
+      "collection": {"type": "string", "enum": ["hr_policies", "it_help", "finance"]},
+      "top_k":      {"type": "integer", "default": 5, "maximum": 10}
+    }
+  }
+}</code></pre>
+<p>The planner decides when to search, just as it decides when to call any other tool. Retrieval shows up in traces as a <code>capability.invoke</code>, the results go to <code>step_results</code>, and compose receives the top chunks with their citations. This is the right default for assistants that mostly do actions and sometimes answer questions.</p>
+
+<h2>Option 2: a knowledge sub-agent</h2>
+<p>When questions are a large share of traffic, give them their own agent with a persona and policy tuned for answering from documents: always cite, quote numbers exactly, say "I couldn't find that" rather than guess. The router hands off to it. This keeps the action agent's prompt small and lets you tune and evaluate each separately.</p>
+
+<h2>Citations are not optional</h2>
+<p>Each chunk carries <code>source_uri</code>, title, section heading and page or anchor. Compose must cite what it used, and the UI renders citations as links. Citations let users verify answers. They also let you detect, in evaluation, when an answer cites a chunk that does not support it.</p>
+
+<h2>Permissions before ranking</h2>
+<p>Documents have audiences. The Saudi payroll policy should not appear for UK staff, and manager-only guidance should not appear for everyone. Filter by the principal's access scope <strong>in the retrieval query</strong>, before ranking, using metadata stored with each chunk. Filtering afterwards risks leaking titles or snippets through logs and traces. See <a href="../../rag-knowledge/safety.html">RAG safety and ACL</a>.</p>
+
+<h2>Keep chunks out of checkpoints</h2>
+<p>Retrieved text can be large. Store it in <code>step_results</code> and keep only chunk ids and a short summary in graph state. Checkpoints stay small and resumes stay fast (see <a href="../../graph-orchestration/state-size.html">keeping GraphState small</a>).</p>
+
+<h2>Hybrid search for internal content</h2>
+<p>Company documents are full of acronyms, form codes and product names, such as "FMLA", "P60" or "form HR-12". Pure vector search handles these poorly because embeddings blur exact tokens. Combining lexical search (BM25) with vector search and fusing the rankings, for example with reciprocal rank fusion, is a reliable improvement for this kind of content.</p>
+
+<h2>Evaluate before you launch</h2>
+<p>Write 50 or so real questions with the document that should answer each. Measure whether that document appears in the top results (recall@k) <em>before</em> evaluating final answers. If retrieval misses, no prompt will fix it. The <a href="../../rag-knowledge/eval-retrieval.html">retrieval evaluation</a> article covers the method.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Measure retrieval recall before tuning compose prompts—bad chunks cannot be composed away.</div><p class="meta"><a href="18-observability-tracing.html">← Previous</a> · <a href="20-evaluation-golden-suite.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>RAG</dt><dd>Retrieval-augmented generation—fetch context before answering.</dd><dt>Chunk</dt><dd>Small passage stored with embedding and source metadata.</dd><dt>Hybrid search</dt><dd>Combining keyword and vector similarity scores.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

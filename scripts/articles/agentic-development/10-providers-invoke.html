@@ -1,0 +1,49 @@
+<!-- desc: Build provider adapters that invoke domain capabilities with shared HTTP pools, explicit timeouts, bounded retries, circuit breakers and typed error envelopes. -->
+<p>Providers are the orchestrator's hands. When the planner decides to call <code>leave.balance.read</code>, a provider turns that into an HTTP request, applies the right credentials and timeouts, and turns whatever comes back into something the graph can reason about. It is unglamorous code, and most production incidents in agent systems start here.</p>
+
+<h2>One interface</h2>
+<pre><code>class Provider(Protocol):
+    async def invoke(self, capability: Capability,
+                     arguments: dict, ctx: RequestContext,
+                     *, operation_id: str | None = None) -&gt; InvokeResult: ...
+
+@dataclass
+class InvokeResult:
+    ok: bool
+    data: dict | None = None
+    error: AppError | None = None
+    status: int | None = None
+    latency_ms: int = 0</code></pre>
+<p>Graph nodes only ever see <code>InvokeResult</code>. They never catch <code>httpx</code> exceptions or read raw status codes.</p>
+
+<h2>The HTTP machinery</h2>
+<ul>
+  <li><strong>Shared client per upstream</strong>, created at startup, with connection pooling and cookie persistence turned off (see step 3).</li>
+  <li><strong>Explicit timeouts</strong>: a short connect timeout (around 2 seconds) and a read timeout that fits the endpoint. A balance lookup should not wait 60 seconds.</li>
+  <li><strong>Bounded retries</strong> on connection errors and 502/503/504 only, with jittered backoff, and only for reads or for writes that carry an operation id.</li>
+  <li><strong>Circuit breaker</strong> per upstream: after N consecutive failures, fail fast for a cool-down period instead of piling up timeouts.</li>
+</ul>
+
+<h2>Typed errors</h2>
+<p>Map upstream responses to a small set of error classes the planner and compose step understand:</p>
+<table>
+  <thead><tr><th>Upstream</th><th>Error class</th><th>What compose says</th></tr></thead>
+  <tbody>
+    <tr><td>400 / 422</td><td><code>invalid_arguments</code></td><td>Asks the user to correct the input</td></tr>
+    <tr><td>401</td><td><code>auth_expired</code></td><td>Asks the user to sign in again</td></tr>
+    <tr><td>403</td><td><code>forbidden</code></td><td>Explains that they lack access, without detail</td></tr>
+    <tr><td>404</td><td><code>not_found</code></td><td>Says the item could not be found</td></tr>
+    <tr><td>409</td><td><code>conflict</code></td><td>Explains the business conflict from the error body</td></tr>
+    <tr><td>5xx, timeout, open circuit</td><td><code>upstream_unavailable</code></td><td>Says the service is busy; try later</td></tr>
+  </tbody>
+</table>
+
+<h2>Writes and operation ids</h2>
+<p>Every write capability carries an <code>operation_id</code> derived from things the model cannot invent: the turn id and the step index. Send it upstream as an <code>Idempotency-Key</code> header. If the user double-taps, or a retry fires after a timeout that actually succeeded, the upstream sees the same key and returns the original result instead of creating a second leave request.</p>
+<div class="callout">Never derive operation ids from model-generated arguments. Two slightly different phrasings of the same request would produce two different ids and two writes.</div>
+
+<h2>Explicit action</h2>
+<p>Writes also require an <code>explicit_action</code> flag that only the confirmation path sets (step 8 and the <a href="../../security-ai/write-confirmation.html">write confirmation</a> article). The provider refuses a write without it, even if the planner asks. This is a cheap, local guard against a planner that skips the confirmation step.</p>
+
+<h2>Observability</h2>
+<p>Wrap every invoke in a <code>capability.invoke</code> span with capability id, provider, status, latency and error class, but not arguments or response bodies by default. That is enough to tell, at a glance, whether a slow turn was the model or the network.</p>

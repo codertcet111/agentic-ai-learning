@@ -1,0 +1,44 @@
+<!-- desc: Practical chunking strategies for RAG: structure-aware splitting on headings and paragraphs, chunk sizes, overlap, metadata for citations and how to test your choices. -->
+<p>Chunking decides what the retriever can find. If a policy's key sentence is split across two chunks, or buried in a chunk dominated by an unrelated table, no embedding model and no prompt will recover it. Chunking is the least glamorous part of RAG and one of the most important.</p>
+
+<h2>Split on structure first</h2>
+<p>Documents already have structure: headings, sections, paragraphs, list items, table rows. Use it.</p>
+<ol>
+  <li>Parse the document into a tree of headings and blocks (Markdown and HTML are easy; for PDFs and Word files use a layout-aware parser).</li>
+  <li>Walk the tree and emit one chunk per section, or per paragraph group within a section.</li>
+  <li>Only when a single section is too long, split it further on paragraph boundaries, then on sentence boundaries. Never cut mid-sentence.</li>
+</ol>
+<p>Fixed-size character splitting is fine for a prototype. It is rarely the best choice for policies, handbooks and documentation.</p>
+
+<h2>Size</h2>
+<p>There is no universal right size, but there are useful starting points:</p>
+<table>
+  <thead><tr><th>Content</th><th>Starting size</th><th>Reason</th></tr></thead>
+  <tbody>
+    <tr><td>Policies, handbooks</td><td>200–400 tokens</td><td>One rule or clause per chunk keeps answers precise</td></tr>
+    <tr><td>How-to guides</td><td>300–600 tokens</td><td>Steps need their surrounding context</td></tr>
+    <tr><td>FAQs</td><td>One Q&amp;A pair</td><td>The natural unit already exists</td></tr>
+    <tr><td>Tables</td><td>Row groups with header repeated</td><td>A row without its header is meaningless</td></tr>
+  </tbody>
+</table>
+<p>Smaller chunks retrieve more precisely but lose context. Larger chunks keep context but dilute the embedding. Measure, do not guess (see <a href="eval-retrieval.html">evaluating retrieval</a>).</p>
+
+<h2>Overlap</h2>
+<p>When you must split inside a section, overlap neighbouring chunks by about 10–15% so a sentence that depends on the previous one is not orphaned. With structure-aware splitting, overlap matters less: a heading boundary is a natural break and needs no overlap.</p>
+
+<h2>Add context to each chunk</h2>
+<p>A chunk that says "This limit does not apply to part-time staff" is useless on its own. Prepend its heading path before embedding:</p>
+<pre><code>Annual Leave Policy &gt; 4. Carry-over &gt; 4.2 Limits
+Employees may carry over up to five days into the next leave year.
+This limit does not apply to part-time staff, whose carry-over is pro-rated.</code></pre>
+<p>This one change often improves retrieval more than switching embedding models. Some teams go further and generate a one-sentence summary of the whole document to prepend to each chunk. That costs one LLM call per document at indexing time, which is usually affordable.</p>
+
+<h2>Metadata for citations</h2>
+<p>Every chunk stores its source URI, title, heading path, page number or anchor, and document version. Compose uses these to cite, and the UI uses them to link to the exact section. See <a href="../data-patterns/vector-metadata.html">vector metadata</a> for the full schema.</p>
+
+<h2>Things to strip</h2>
+<ul>
+  <li>Repeated headers and footers from PDFs ("Company Confidential – Page 3 of 18").</li>
+  <li>Tables of contents. They match every query and answer none.</li>
+  <li>Navigation text from scraped web pages.</li>
+</ul>

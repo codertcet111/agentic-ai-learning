@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step 1 — Draw the orchestration boundary | Agentic Field Notes</title>
+  <meta name="description" content="Separate the LLM orchestration layer from your domain APIs before writing a line of agent code, and decide which layer owns rules, data, and permissions.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/01-orchestration-plane.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/01-orchestration-plane.html">
+  <meta property="og:title" content="Step 1 — Draw the orchestration boundary">
+  <meta property="og:description" content="Separate the LLM orchestration layer from your domain APIs before writing a line of agent code, and decide which layer owns rules, data, and permissions.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 1 — Draw the orchestration boundary","description":"Separate the LLM orchestration layer from your domain APIs before writing a line of agent code, and decide which layer owns rules, data, and permissions.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 1</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Step 1 — Draw the orchestration boundary</h1>
+        <p class="lead" itemprop="description">Separate the LLM orchestration layer from your domain APIs before writing a line of agent code, and decide which layer owns rules, data, and permissions.</p>
+        <p class="meta">3 min read</p>
+      </header>
+      <div data-visual="graph"></div>
+      <p>Most agentic systems that fail in production do not fail because the model is weak. They fail because nobody drew a line between the part of the system that <em>talks</em> and the part that <em>decides</em>. Business rules leak into prompts, permission checks live in graph state, and six months later the "AI service" has quietly become a second copy of the product's backend, written in English.</p>
+<p>The first step of this series is therefore not code. It is a boundary.</p>
+
+<h2>Two planes, two jobs</h2>
+<p>Split the system into two planes with different owners and different failure modes.</p>
+<ul>
+  <li><strong>The domain plane</strong> is the system of record. It owns data, authorization, validation and every write. Payroll rules, leave balances, inventory counts and refund limits live here. It already exists in most companies as a set of REST or RPC services.</li>
+  <li><strong>The orchestration plane</strong> owns the conversation. It stores chat history, decides which tool to call next, fills in arguments, asks clarifying questions and turns structured results into natural language. It never owns a business fact.</li>
+</ul>
+<p>The orchestrator talks to the domain through a narrow <strong>invoke contract</strong>: a typed request naming a capability and its arguments, and a typed envelope coming back with either a result or a structured error. The orchestrator forwards the same user credentials the web app would use, so the domain applies exactly the same permissions.</p>
+
+<h2>The test for where a rule belongs</h2>
+<div class="callout">If a rule must hold even when the model is offline, misbehaving, or replaced by a different model, it belongs in the domain plane, not in a prompt.</div>
+<p>"Employees cannot approve their own expense claims" is a domain rule. If it lives only in a system prompt, a cleverly phrased message will eventually get around it. If it lives in the expense API, the model can ask as many times as it likes and the API will refuse each time.</p>
+<p>"Ask for the date range before searching leave history" is an orchestration rule. Breaking it produces a worse conversation, not a security incident. It is fine for that to live in planner policy.</p>
+
+<h2>A worked example</h2>
+<p>Imagine an HR copilot that can answer "how many leave days do I have left?" and "book Friday off".</p>
+<pre><code>User ──► Chat UI ──► Orchestrator ──► HR API  (GET /leave/balance)
+                         │       └──► HR API  (POST /leave/requests)
+                         ├── Mongo: messages, turns, pending forms
+                         └── LLM: plan → resolve args → compose reply</code></pre>
+<p>The orchestrator never computes a leave balance. It calls the balance endpoint and phrases the answer. It never decides whether Friday can be booked; it collects the date, shows a confirmation form, and lets the HR API accept or reject the request. If the API returns <code>409 overlapping_request</code>, the orchestrator explains that politely. It does not try to work around it.</p>
+
+<h2>What goes wrong without the boundary</h2>
+<ul>
+  <li><strong>Duplicated logic drifts.</strong> The web app changes the carry-over policy; the prompt still describes the old one; the bot gives wrong answers with full confidence.</li>
+  <li><strong>Permissions become probabilistic.</strong> A check that runs only because the model chose to run it is not a check.</li>
+  <li><strong>Testing gets expensive.</strong> When rules hide in prompts, the only way to test them is to call a real model many times and hope.</li>
+  <li><strong>Audits get hard.</strong> "Why was this approved?" should be answered by a domain log, not by replaying a conversation.</li>
+</ul>
+
+<h2>A one-page boundary document</h2>
+<p>Before writing the first graph node, write a short document listing:</p>
+<ol>
+  <li>The three to ten domain APIs the agent will call, with their auth model.</li>
+  <li>Which of them are read-only and which mutate data.</li>
+  <li>Any rule that currently exists only in someone's head or in UI code. Move these into the API first.</li>
+  <li>What the orchestrator is allowed to store (messages, form state, usage counters) and what it must never store (tokens, raw domain records beyond what the user saw).</li>
+</ol>
+<p>This document becomes the reference for code review. When someone opens a pull request adding a business rule to a prompt, the conversation is short: "that belongs in the API."</p>
+
+<h2>Where this leads</h2>
+<p>Every later step in this series assumes the boundary exists. Layering (step 2) keeps imports pointing one way. Request context (step 3) carries credentials across the boundary without storing them. The capability catalog (step 9) is the published shape of the domain plane. Once the line is drawn, the rest of the architecture has somewhere to stand.</p>
+<div class="callout dev-pov"><strong>Developer POV:</strong> Before coding, list three APIs your agent will call—if any logic is not already in those APIs, move it there first.</div><p class="meta"><a href="02-layered-architecture.html">Next →</a></p>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Orchestration plane</dt><dd>The service that runs the LLM workflow, stores chat state, and calls tools—without owning business data.</dd><dt>Domain service</dt><dd>The system of record that enforces permissions and mutates business entities.</dd><dt>Invoke contract</dt><dd>A stable HTTP/RPC surface tools call with typed arguments and explicit success envelopes.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../../assets/js/site.js" defer></script>
+  <script src="../../assets/js/visuals.js" defer></script>
+</body>
+</html>

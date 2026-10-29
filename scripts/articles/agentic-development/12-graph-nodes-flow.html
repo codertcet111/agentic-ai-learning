@@ -1,0 +1,49 @@
+<!-- desc: A walk through a production agent graph pipeline: load session, route, plan, resolve arguments, invoke, evaluate conditions, request input and compose the reply. -->
+<p>Step 11 built the skeleton. This step walks through what each node does in a production pipeline and, just as important, what each one must not do.</p>
+<pre><code>load_session → route_request ─┬─► direct recipe ─────────────────────► compose
+                               └─► plan_next_step ─┬─► resolve_arguments → invoke_capability ─┐
+                                        ▲          ├─► request_input (pause)                  │
+                                        │          └─► compose_response                       │
+                                        └──────────── evaluate_condition ◄────────────────────┘</code></pre>
+
+<h2>load_session</h2>
+<p>Hydrates what the turn needs: the session's pinned catalog filtered to this principal, the active agent definition (persona, policy, allowed capabilities), locale and the transcript window. No LLM calls. If the session has expired, it short-circuits to a fixed "please sign in again" response.</p>
+
+<h2>route_request</h2>
+<p>Decides between a <strong>direct recipe</strong> (an exact known command, step 15) and the model path. In multi-agent setups it also picks which sub-agent owns the turn. A small, cheap model or plain rules usually suffice here.</p>
+
+<h2>plan_next_step</h2>
+<p>The core LLM decision. Given the user's message, the transcript window, the filtered capability cards and any results so far, it returns one of:</p>
+<ul>
+  <li><code>call_tool</code> with a capability id and the user's intent in its own words,</li>
+  <li><code>need_input</code> with what is missing,</li>
+  <li><code>answer</code> when it has enough to reply.</li>
+</ul>
+<p>The output is a typed schema (step 13), never free text.</p>
+
+<h2>resolve_arguments</h2>
+<p>Turns intent into concrete arguments that validate against the capability's schema. Dates like "next Friday" become ISO dates in the user's timezone. Entity names that need ids trigger lookups whose results are appended to <code>lookup_trace</code>, followed by a replan (step 14). The resolver never silently picks the first search result.</p>
+
+<h2>invoke_capability</h2>
+<p>Checks that the capability is in the session's allowed set, checks <code>explicit_action</code> for writes, calls the provider (step 10), stores the full result in <code>step_results</code> and puts a compact summary and the result id in state.</p>
+
+<h2>evaluate_condition</h2>
+<p>Some workflows branch on results: "if the balance is under 3 days, warn before creating the request". Prefer deterministic code over the result's fields. Use a small LLM call with a typed boolean output only when the condition is genuinely fuzzy.</p>
+
+<h2>request_input</h2>
+<p>Creates a pending interaction (step 8) with a schema and prefill, adds a short message explaining what is needed, and ends the run. The checkpoint holds the resume point.</p>
+
+<h2>compose_response</h2>
+<p>Produces what the user reads. It receives structured results and the plan, not raw tool payloads, and writes text in the user's locale with fallbacks (step 16). It sets <code>response_finalized</code> so no later node composes again.</p>
+
+<h2>Typical turn sequences</h2>
+<table>
+  <thead><tr><th>User says</th><th>Node sequence</th></tr></thead>
+  <tbody>
+    <tr><td>"How many leave days do I have?"</td><td>load → route → plan → resolve → invoke → plan → compose</td></tr>
+    <tr><td>"Book Friday off"</td><td>load → route → plan → resolve → ask (form)</td></tr>
+    <tr><td>(submits form)</td><td>resume → invoke → plan → compose</td></tr>
+    <tr><td>"reset conversation"</td><td>load → route → recipe → compose</td></tr>
+  </tbody>
+</table>
+<p>Record these sequences for your golden cases and keep them in the repository. When a refactor changes one, the diff tells you exactly which behaviour moved. The Langfuse span tree (<a href="../../langfuse-lab/span-tree-and-nodes.html">see the lab</a>) shows the same sequence for any real turn.</p>

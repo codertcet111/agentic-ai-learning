@@ -1,0 +1,46 @@
+<!-- desc: Expose RAG retrieval to an agent as an explicit tool call instead of silently injecting context every turn, for lower token use, clearer traces and better answers. -->
+<p>There are two ways to add document knowledge to an assistant. <strong>Silent injection</strong> runs a search on every user message and prepends the top chunks to the prompt. <strong>Retrieval as a tool</strong> lets the planner decide when to search, with which query, in which collection. For agents that also take actions, the second is almost always better.</p>
+
+<h2>Problems with silent injection</h2>
+<ul>
+  <li><strong>Wasted tokens.</strong> "Book Friday off" does not need five policy chunks in the prompt, but it gets them anyway.</li>
+  <li><strong>Distraction.</strong> Irrelevant chunks pull the model towards quoting policy when the user wanted an action.</li>
+  <li><strong>Bad queries.</strong> The raw user message is often a poor search query: "and what about part-timers?" means nothing without the previous turn.</li>
+  <li><strong>Invisible in traces.</strong> When an answer is wrong, it is hard to see which chunks the model was given and why.</li>
+</ul>
+
+<h2>Retrieval as a capability</h2>
+<pre><code>{
+  "id": "knowledge.search",
+  "summary": "Search company documents for policies, procedures and how-to guides. Use for general questions about rules. Do not use for the user's personal data such as balances or payslips.",
+  "side_effect": "read",
+  "parameters": {
+    "type": "object",
+    "required": ["query"],
+    "properties": {
+      "query": {"type": "string",
+                "description": "A standalone search query. Rewrite follow-up questions so they make sense without the conversation."},
+      "collection": {"type": "string", "enum": ["hr_policies", "it_help", "finance"]},
+      "top_k": {"type": "integer", "default": 5, "maximum": 10}
+    }
+  }
+}</code></pre>
+<p>Two details do a lot of work. The summary says when <em>not</em> to use the tool, which stops the model searching documents for personal data. The <code>query</code> description asks for a standalone rewrite, so "and part-timers?" becomes "carry-over leave limits for part-time employees".</p>
+
+<h2>What the tool returns</h2>
+<pre><code>{
+  "results": [
+    {"chunk_id": "chk_…", "score": 0.82,
+     "title": "Annual Leave Policy", "section": "4.2 Limits",
+     "source_uri": "https://intranet.example.com/policies/leave#4-2",
+     "text": "…"}
+  ],
+  "query_used": "carry-over leave limits for part-time employees"
+}</code></pre>
+<p>Store the full result in <code>step_results</code>. Put chunk ids and titles in graph state. Compose receives the texts with citation metadata.</p>
+
+<h2>When silent injection is fine</h2>
+<p>A pure question-answering bot over a document set, with no actions, where nearly every message is a question, can reasonably search on every turn. Even then, do the query rewrite step explicitly and log the retrieval as its own span, so it is visible in traces.</p>
+
+<h2>Tracing</h2>
+<p>Because retrieval is a capability, it gets a <code>capability.invoke</code> span with the query used, collection, number of results and top score. When an answer is wrong, you can see immediately whether the right chunk was retrieved and ignored (a compose problem) or never retrieved (a retrieval problem). Those two need very different fixes.</p>

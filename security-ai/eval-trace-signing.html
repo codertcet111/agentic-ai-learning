@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Signed eval traces | Agentic Field Notes</title>
+  <meta name="description" content="Sign automated evaluation traffic so CI runs can be identified, routed to experiment traces and given test-only behaviour, without exposing signing keys to production.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/security-ai/eval-trace-signing.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/security-ai/eval-trace-signing.html">
+  <meta property="og:title" content="Signed eval traces">
+  <meta property="og:description" content="Sign automated evaluation traffic so CI runs can be identified, routed to experiment traces and given test-only behaviour, without exposing signing keys to production.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Signed eval traces","description":"Sign automated evaluation traffic so CI runs can be identified, routed to experiment traces and given test-only behaviour, without exposing signing keys to production.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Security for AI</a> / Signed eval traces</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Signed eval traces</h1>
+        <p class="lead" itemprop="description">Sign automated evaluation traffic so CI runs can be identified, routed to experiment traces and given test-only behaviour, without exposing signing keys to production.</p>
+        <p class="meta">1 min read</p>
+      </header>
+      <div data-visual="default"></div>
+      <p>Evaluation runs send realistic traffic through your assistant. You want that traffic to be recognisable: routed to an experiment in your tracing tool, excluded from usage dashboards and product metrics, and allowed to use test fixtures. But "recognisable" must not mean "anyone can claim to be a test", because test mode can unlock behaviour you never want real users to reach.</p>
+
+<h2>Sign the eval request</h2>
+<p>The eval runner signs each request with a key only CI has:</p>
+<pre><code>timestamp = str(int(time.time()))
+body_hash = sha256(body).hexdigest()
+message = f"{timestamp}.{run_id}.{case_id}.{body_hash}"
+signature = hmac.new(EVAL_SIGNING_KEY, message.encode(), "sha256").hexdigest()
+
+headers = {
+  "X-Eval-Run": run_id,
+  "X-Eval-Case": case_id,
+  "X-Eval-Timestamp": timestamp,
+  "X-Eval-Signature": signature,
+}</code></pre>
+<p>The server recomputes the HMAC with its copy of the key, compares it in constant time, and rejects timestamps older than a few minutes to prevent replay.</p>
+
+<h2>What a valid signature unlocks</h2>
+<ul>
+  <li>Traces are tagged with the run and case ids and grouped as an experiment.</li>
+  <li>Usage counters and product analytics skip the turn.</li>
+  <li>The stub LLM or recorded upstream fixtures may be selected, but only in non-production environments.</li>
+</ul>
+<p>An invalid or missing signature means the request is treated as normal traffic. Unsigned requests claiming to be evals are logged as a security event.</p>
+
+<h2>Keep keys out of production</h2>
+<p>The signing key exists in CI secrets and in non-production environments. Production either has no eval key at all, so eval headers are ignored, or a separate key that only enables tagging, never fixtures or stubs. Rotate keys on a schedule and whenever someone with access leaves.</p>
+
+<h2>Why not just an API key header?</h2>
+<p>A static "test mode" header is a shared secret that leaks easily: into logs, into browser developer tools, into screenshots. A signature over the timestamp and body is useless once it expires and cannot be reused for a different request. The extra code is small.</p>
+<nav class="post-nav" aria-label="More in this section"><a href="write-confirmation.html">← Writes and explicit confirmation</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>Eval signing</dt><dd>HMAC proving a trace belongs to automated eval traffic.</dd><dt>Experiment</dt><dd>Langfuse grouping of related eval traces.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

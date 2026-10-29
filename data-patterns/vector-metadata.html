@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vector metadata alongside Mongo | Agentic Field Notes</title>
+  <meta name="description" content="Keep chunk metadata such as source, ACL scope, versions and embedding model in MongoDB alongside a vector store, so RAG retrieval is filterable, auditable and re-indexable.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/data-patterns/vector-metadata.html">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/data-patterns/vector-metadata.html">
+  <meta property="og:title" content="Vector metadata alongside Mongo">
+  <meta property="og:description" content="Keep chunk metadata such as source, ACL scope, versions and embedding model in MongoDB alongside a vector store, so RAG retrieval is filterable, auditable and re-indexable.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Vector metadata alongside Mongo","description":"Keep chunk metadata such as source, ACL scope, versions and embedding model in MongoDB alongside a vector store, so RAG retrieval is filterable, auditable and re-indexable.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Mongo for AI</a> / Vector metadata alongside Mongo</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Vector metadata alongside Mongo</h1>
+        <p class="lead" itemprop="description">Keep chunk metadata such as source, ACL scope, versions and embedding model in MongoDB alongside a vector store, so RAG retrieval is filterable, auditable and re-indexable.</p>
+        <p class="meta">2 min read</p>
+      </header>
+      <div data-visual="data"></div>
+      <p>Vectors are only half of a retrieval system. The other half is metadata: where a chunk came from, who may see it, which version of the document it belongs to, and which model embedded it. Whether your vectors live in MongoDB Atlas Vector Search, pgvector, OpenSearch or a dedicated vector database, the metadata deserves a proper schema.</p>
+
+<h2>The chunk document</h2>
+<pre><code>{
+  "_id": "chk_hr-leave-policy_v7_0012",
+  "tenant_id": "acme",
+  "collection": "hr_policies",
+  "document_id": "doc_hr-leave-policy",
+  "document_version": 7,
+  "content_hash": "sha256:41c…",
+  "source_uri": "https://intranet.example.com/policies/leave",
+  "title": "Annual Leave Policy",
+  "section_path": ["4. Carry-over", "4.2 Limits"],
+  "page": 6,
+  "text": "Employees may carry over up to five days …",
+  "token_count": 214,
+  "acl": {"countries": ["UK"], "roles": ["employee", "manager"]},
+  "language": "en",
+  "embedding_model": "text-embed-v3",
+  "embedding_dim": 1024,
+  "indexed_at": ISODate("…"),
+  "active": true
+}</code></pre>
+
+<h2>Same store or separate?</h2>
+<ul>
+  <li><strong>Same store</strong> (for example MongoDB Atlas Vector Search, or Postgres with pgvector): the embedding sits on the same document, and metadata filters run inside the vector query. This is the simplest option, with no sync problem.</li>
+  <li><strong>Separate vector store</strong>: keep the chunk document in MongoDB as the source of truth and copy the filterable fields (tenant, collection, ACL, active, language) into the vector store's metadata. A re-index job keeps them in sync.</li>
+</ul>
+<p>Either way, the fields you filter on at query time must be available <em>inside</em> the vector search, not applied afterwards.</p>
+
+<h2>ACL in metadata, decision in the domain</h2>
+<p>The <code>acl</code> field lets retrieval pre-filter cheaply. The principal's attributes (country, roles) come from the session, which the domain API confirmed at login. The orchestrator never decides on its own that a user is a manager. It reads that from the domain and passes it into the filter.</p>
+
+<h2>Versioning</h2>
+<p>When a document changes, write new chunks with the next <code>document_version</code>, then flip <code>active</code> on the old ones to false in one step. Queries filter on <code>active: true</code>. This avoids a window where half-old, half-new chunks are served, and lets you roll back by flipping the flag back.</p>
+
+<h2>Embedding model per chunk</h2>
+<p>Store the model id and dimension on every chunk. When you change embedding models, vectors from the old and new models are not comparable. Build the new index alongside the old one, switch queries over once it is complete, then delete the old vectors. Without the field, you cannot tell which chunks still need re-embedding.</p>
+
+<h2>Useful indexes</h2>
+<pre><code>{ document_id: 1, document_version: 1 }
+{ content_hash: 1 }                                  — skip unchanged chunks on re-index
+{ tenant_id: 1, collection: 1, active: 1 }</code></pre>
+<nav class="post-nav" aria-label="More in this section"><a href="failure-records.html">← Failure records for support</a><a href="turn-ledger-dev.html">Turn ledger for developers →</a></nav>
+      
+<section class="jargon" aria-labelledby="jargon-heading">
+  <h2 id="jargon-heading">Terms on this page</h2>
+  <dl><dt>ACL scope</dt><dd>Who may retrieve a chunk at query time.</dd><dt>Embedding version</dt><dd>Model id used to produce vectors.</dd></dl>
+</section>
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

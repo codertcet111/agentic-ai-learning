@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Langfuse Lab | Agentic Field Notes</title>
+  <meta name="description" content="Developer walkthrough of LLM traces: failures, span trees, token cost per node, turn checks, and privacy-safe export.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/">
+  <meta property="og:title" content="Langfuse Lab">
+  <meta property="og:description" content="Developer walkthrough of LLM traces: failures, span trees, token cost per node, turn checks, and privacy-safe export.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Langfuse Lab","description":"Developer walkthrough of LLM traces: failures, span trees, token cost per node, turn checks, and privacy-safe export.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / Langfuse Lab</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">Langfuse Lab</h1>
+        <p class="lead" itemprop="description">Developer walkthrough of LLM traces: failures, span trees, token cost per node, turn checks, and privacy-safe export.</p>
+        
+      </header>
+      
+      <p>Developer walkthrough of LLM traces: failures, span trees, token cost per node, turn checks, and privacy-safe export.</p><ul class="step-list"><li><a href="dev-workflow.html"><span class="step-num">01</span><span><strong>Langfuse workflow for AI developers</strong><br><small>A day-to-day Langfuse workflow for AI developers: one trace per chat turn, consistent observation names, safe capture modes, release tags and linking traces to logs.</small></span></a></li><li><a href="traces-list-and-errors.html"><span class="step-num">02</span><span><strong>Traces list: spot failures and slow turns</strong><br><small>Use the Langfuse traces list to find failed and slow agent turns after a deploy: filter by environment and time, sort by latency and cost, and search by conversation or request id.</small></span></a></li><li><a href="span-tree-and-nodes.html"><span class="step-num">03</span><span><strong>Span tree: cost and time per graph node</strong><br><small>Read the Langfuse span tree to see time and cost per graph node, spot planner loops and slow tool calls, and explain why a particular chat turn was expensive.</small></span></a></li><li><a href="trace-detail-io-and-tokens.html"><span class="step-num">04</span><span><strong>Trace detail: IO, tokens, and model metadata</strong><br><small>Inspect a Langfuse generation in detail: structured input and output, token breakdown including cached tokens, cost, model metadata and the scores attached to the turn.</small></span></a></li><li><a href="turn-checks-and-budgets.html"><span class="step-num">05</span><span><strong>Turn checks: automated budgets on every trace</strong><br><small>Run automated turn checks when each agent trace completes: limits on LLM calls, wall-clock time, slow generations, cost and reply size, recorded as Langfuse scores.</small></span></a></li><li><a href="masking-alerts-and-failures.html"><span class="step-num">06</span><span><strong>Masking residuals, failures, and Rollbar alerts</strong><br><small>Mask personal data before exporting LLM traces, alert on residual PII without logging the values, and record clear failure reasons on root traces for faster debugging.</small></span></a></li><li><a href="local-setup-checklist.html"><span class="step-num">07</span><span><strong>Local Langfuse setup checklist</strong><br><small>A checklist for setting up Langfuse tracing locally for an agent backend: environment variables, region, capture mode, first trace, and common reasons traces do not appear.</small></span></a></li></ul>
+      
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

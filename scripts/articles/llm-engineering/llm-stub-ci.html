@@ -1,0 +1,38 @@
+<!-- desc: Use a stub LLM (LLM_STUB) to run agent graph tests and golden cases deterministically in CI without API keys, and keep stub fixtures in sync with schemas. -->
+<p>Most bugs in an agent backend are not model bugs. They are routing bugs, persistence bugs, form-resume bugs and provider bugs. None of those need a real model to reproduce. A stub LLM lets CI test all of them on every pull request, deterministically, with no API keys and no cost.</p>
+
+<h2>How the stub works</h2>
+<p>With <code>LLM_STUB=true</code>, the gateway is replaced by a stub that returns pre-recorded structured outputs instead of calling a provider:</p>
+<pre><code>class StubGateway(LLMGateway):
+    def __init__(self, fixtures: StubFixtures):
+        self.fixtures = fixtures
+
+    async def complete(self, alias, messages, *, schema, purpose, ctx):
+        key = self.fixtures.key_for(ctx.case_id, purpose, ctx.call_index(purpose))
+        payload = self.fixtures.get(key)
+        return LLMResult(parsed=schema.model_validate(payload), usage=FAKE_USAGE)</code></pre>
+<p>Each golden case provides the outputs the model would produce for each call, in order:</p>
+<pre><code>"stub": {
+  "plan":    [{"kind": "call_tool", "capability_id": "leave.balance.read", "intent": "check balance"},
+              {"kind": "answer", "intent": "report balance"}],
+  "compose": [{"text_en": "You have 12 days left.", "text_ar": "لديك 12 يومًا متبقية."}]
+}</code></pre>
+
+<h2>What stubbed tests prove</h2>
+<ul>
+  <li>Routing reaches the expected nodes in the expected order.</li>
+  <li>Providers are called with the right capability and arguments.</li>
+  <li>Messages, ledger entries and pending interactions are persisted correctly.</li>
+  <li>Writes go through confirmation and are executed once.</li>
+  <li>Errors from upstream are mapped and explained.</li>
+</ul>
+<p>They do <strong>not</strong> prove the real model will make the same decisions. That is the job of the nightly live run.</p>
+
+<h2>Validate stub fixtures against schemas</h2>
+<p>The stub validates its fixtures with the same Pydantic models the real path uses. If someone renames a field in <code>PlanDecision</code> and forgets the fixtures, CI fails immediately rather than silently passing on outdated data.</p>
+
+<h2>Recording fixtures</h2>
+<p>Writing stub outputs by hand is fine for a few cases. For more, add a record mode: run the case against a real model once, save the validated outputs as the fixture, and review the diff in the pull request. Re-record when prompts change intentionally.</p>
+
+<h2>Never in production</h2>
+<p>Guard the stub so it cannot start in production: refuse to boot if <code>LLM_STUB=true</code> and the environment is <code>production</code>. A stub serving canned answers to real users is a very confusing incident.</p>

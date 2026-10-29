@@ -1,0 +1,43 @@
+<!-- desc: Attach evaluation scores to Langfuse traces from CI and production checks, tag releases, and use score trends to spot regressions in routing, tool use, latency and cost. -->
+<p>Langfuse lets you attach <strong>scores</strong> to traces and observations: numeric, boolean or categorical values with a name and an optional comment. Scores turn a pile of traces into something you can chart, filter and compare across releases.</p>
+
+<h2>Where scores come from</h2>
+<ul>
+  <li><strong>Eval runs in CI</strong>: the golden runner scores each case's trace (routing correct, tools correct, within budget).</li>
+  <li><strong>Automatic turn checks in production</strong>: budgets checked when each turn finishes (see <a href="../langfuse-lab/turn-checks-and-budgets.html">turn checks</a>).</li>
+  <li><strong>LLM judges</strong>: groundedness or helpfulness on a sample of traces.</li>
+  <li><strong>User feedback</strong>: thumbs up or down from the UI, attached to the trace.</li>
+</ul>
+
+<h2>Attaching a score</h2>
+<p>With the Langfuse Python SDK, scores are created against a trace id, and optionally an observation id. The exact method name has changed between SDK versions, so check the documentation for the version you install. The shape is:</p>
+<pre><code>langfuse.create_score(
+    trace_id=trace_id,
+    name="routing_correct",
+    value=1,                       # numeric or boolean
+    data_type="BOOLEAN",
+    comment="expected hr_assistant, got hr_assistant",
+)</code></pre>
+<p>Keep score names stable and few. Renaming <code>tool_correct</code> to <code>tools_ok</code> halfway through a quarter breaks every chart.</p>
+
+<h2>A starter set</h2>
+<table>
+  <thead><tr><th>Score</th><th>Type</th><th>Source</th></tr></thead>
+  <tbody>
+    <tr><td><code>routing_correct</code></td><td>Boolean</td><td>Golden runner</td></tr>
+    <tr><td><code>tools_correct</code></td><td>Boolean</td><td>Golden runner</td></tr>
+    <tr><td><code>within_llm_call_budget</code></td><td>Boolean</td><td>Turn check</td></tr>
+    <tr><td><code>within_latency_budget</code></td><td>Boolean</td><td>Turn check</td></tr>
+    <tr><td><code>groundedness</code></td><td>Numeric 1–3</td><td>Judge, sampled</td></tr>
+    <tr><td><code>user_feedback</code></td><td>Boolean</td><td>UI</td></tr>
+  </tbody>
+</table>
+
+<h2>Tag releases and environments</h2>
+<p>Set the release (your version or commit) and environment on every trace. Then the Langfuse UI and API can group scores by release: "<code>tools_correct</code> was 0.97 on 2026.10.20 and 0.91 on 2026.10.28" is a regression you can act on. Without release tags, you can only see that something changed at some point.</p>
+
+<h2>Separate eval traffic</h2>
+<p>Keep CI eval traces distinguishable from user traffic, either in a separate Langfuse project or with a clear tag. Langfuse datasets and experiment runs are designed for this: each golden case becomes a dataset item, and each CI run becomes an experiment you can compare with earlier ones. See also <a href="../security-ai/eval-trace-signing.html">signed eval traces</a>.</p>
+
+<h2>Act on trends</h2>
+<p>Review score dashboards weekly, not only when something breaks. A slow decline in <code>within_llm_call_budget</code> often means the catalog is growing and tool descriptions are starting to overlap, and it is much easier to fix early.</p>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLM Engineering | Agentic Field Notes</title>
+  <meta name="description" content="Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.">
+  <meta name="author" content="AI Application Developer">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/llm-engineering/">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/llm-engineering/">
+  <meta property="og:title" content="LLM Engineering">
+  <meta property="og:description" content="Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"LLM Engineering","description":"Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.","author":{"@type":"Person","name":"AI Application Developer"}}
+  </script>
+  
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header"></header>
+  <main id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / LLM Engineering</nav>
+    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
+      <header class="article-header">
+        <h1 itemprop="headline">LLM Engineering</h1>
+        <p class="lead" itemprop="description">Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.</p>
+        
+      </header>
+      
+      <p>Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer's chair.</p><ul class="step-list"><li><a href="litellm-gateway.html"><span class="step-num">01</span><span><strong>LiteLLM as a single gateway</strong><br><small>Route every model call through one gateway such as LiteLLM: model aliases in config, central timeouts and retries, fallbacks, token accounting and provider portability.</small></span></a></li><li><a href="structured-outputs.html"><span class="step-num">02</span><span><strong>Structured outputs in production</strong><br><small>Get reliable structured outputs from LLMs in production: Pydantic schemas, provider-native JSON schema modes, semantic validation, a single repair attempt and safe failure.</small></span></a></li><li><a href="llm-stub-ci.html"><span class="step-num">03</span><span><strong>LLM_STUB and deterministic CI</strong><br><small>Use a stub LLM (LLM_STUB) to run agent graph tests and golden cases deterministically in CI without API keys, and keep stub fixtures in sync with schemas.</small></span></a></li><li><a href="token-window-management.html"><span class="step-num">04</span><span><strong>Token window management</strong><br><small>Manage the LLM context window in chat agents: token budgets per section, recent-turn windows, summaries of older turns, compact tool results and measuring the effect in traces.</small></span></a></li><li><a href="model-routing.html"><span class="step-num">05</span><span><strong>When to use small vs large models</strong><br><small>Decide when to use small versus large language models in an agent: route by purpose, measure with traces, escalate on low confidence and evaluate each tier on its own tasks.</small></span></a></li><li><a href="streaming-dev.html"><span class="step-num">06</span><span><strong>Streaming responses to the client</strong><br><small>Stream LLM responses to chat clients safely: admit the turn first, stream only the compose step, handle client aborts, and reconcile the turn ledger so retries stay correct.</small></span></a></li></ul>
+      
+    </article>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script src="../assets/js/site.js" defer></script>
+  <script src="../assets/js/visuals.js" defer></script>
+</body>
+</html>

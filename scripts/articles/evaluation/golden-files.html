@@ -1,0 +1,68 @@
+<!-- desc: How to structure golden JSON test cases for an AI agent: one file per scenario, tags, fixtures, expectations that can be checked mechanically and schema validation in CI. -->
+<p>Golden cases are the agent equivalent of regression tests: fixed inputs with expected behaviour, checked on every change. <a href="../agentic-development/steps/20-evaluation-golden-suite.html">Step 20</a> explains why. This article covers how to organize the files so the suite stays useful as it grows to hundreds of cases.</p>
+
+<h2>Layout</h2>
+<pre><code>evals/
+  schema/golden_case.schema.json
+  fixtures/
+    principals.json          # fake users with roles and attributes
+    upstream/                # recorded or hand-written API responses
+  cases/
+    leave/
+      balance.basic.en.json
+      balance.basic.ar.json
+      request.ambiguous-approver.en.json
+    safety/
+      other-employee-salary.en.json
+      injection-in-policy-doc.en.json
+  baselines/
+    2026-10-20/              # last approved real-model run</code></pre>
+<p>One file per scenario. Files are easy to review in pull requests, easy to delete, and merge conflicts are rare.</p>
+
+<h2>A case</h2>
+<pre><code>{
+  "id": "leave.request.ambiguous-approver.en",
+  "description": "Two employees named Sara; the assistant must ask which one.",
+  "tags": ["leave", "write", "multi-turn", "ambiguity", "en"],
+  "principal": "employee_basic",
+  "upstream": {"employees.search?q=Sara": "fixtures/upstream/two_saras.json"},
+  "turns": [
+    {"user": "book next Friday off, approver Sara",
+     "expect": {"capabilities": ["employees.search"],
+                "pending_interaction": {"kind": "choice", "options_count": 2},
+                "no_capabilities": ["leave.request.create"]}},
+    {"form_submission": {"approver_id": "emp_388"},
+     "expect": {"pending_interaction": {"kind": "confirmation"}}},
+    {"form_submission": {"action": "confirm"},
+     "expect": {"capabilities": ["leave.request.create"],
+                "upstream_calls": {"leave.request.create": 1}}}
+  ]
+}</code></pre>
+
+<h2>Expectations that can be checked mechanically</h2>
+<p>Prefer expectations that a program can check exactly:</p>
+<ul>
+  <li><code>capabilities</code> / <code>no_capabilities</code>: called or not called, optionally in order.</li>
+  <li><code>route</code>: recipe, model, or a specific agent.</li>
+  <li><code>pending_interaction</code>: kind and shape.</li>
+  <li><code>presentation_mode</code>: table, card and so on.</li>
+  <li><code>upstream_calls</code>: exact counts, which is critical for writes.</li>
+  <li><code>max_llm_calls</code>, <code>max_latency_ms</code>: budgets.</li>
+  <li><code>response_contains_any</code>: key facts, loosely matched.</li>
+</ul>
+<p>Avoid exact text matches on model output. They break on every harmless wording change and teach the team to ignore failures.</p>
+
+<h2>Validate the cases themselves</h2>
+<p>A JSON Schema for golden cases catches typos such as <code>"capabilites"</code> before they produce a case that silently checks nothing. Validate every file in CI, before running anything.</p>
+
+<h2>Tags drive selection</h2>
+<pre><code>pytest evals/ -m "safety or write"          # pull request gate
+pytest evals/ --tags leave                   # working on the leave flows
+pytest evals/ --live --tags all              # nightly with real models</code></pre>
+
+<h2>Where cases come from</h2>
+<ul>
+  <li>Every bug fix adds a case that failed before the fix.</li>
+  <li>Every new capability ships with at least one case per supported language.</li>
+  <li>Support tickets about confusing behaviour become cases once the desired behaviour is agreed.</li>
+</ul>
