@@ -499,7 +499,7 @@ main {
   border-radius: 22px;
   overflow: hidden;
   aspect-ratio: 4 / 5;
-  background: #1c2160;
+  background: var(--wash);
   box-shadow: 14px 14px 0 var(--marker);
 }
 
@@ -509,16 +509,6 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: opacity 0.6s ease;
-}
-
-.portrait-frame .photo-color {
-  opacity: 0;
-}
-
-.portrait:hover .photo-color,
-.portrait:focus-within .photo-color {
-  opacity: 1;
 }
 
 .trace-card {
@@ -605,9 +595,6 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .trace-card .bar i {
     animation: none;
-  }
-  .portrait-frame img {
-    transition: none;
   }
 }
 
@@ -1214,4 +1201,456 @@ main {
   max-width: var(--read-w);
   margin: 0 auto;
   padding: 5rem var(--gutter);
+}
+
+/* ---------- Progress (shown only when JavaScript runs) ---------- */
+
+.needs-js {
+  display: none !important;
+}
+
+html.js .needs-js {
+  display: revert !important;
+}
+
+html.js .needs-js.progress,
+html.js .needs-js.progress-card {
+  display: block !important;
+}
+
+html.js .needs-js.done-toggle {
+  display: inline-flex !important;
+}
+
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  margin-bottom: 0.45rem;
+}
+
+.progress-head strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.progress-head span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--wash);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--signal);
+  transition: width 0.35s ease;
+}
+
+.progress.is-complete .progress-fill {
+  background: #1f9d6b;
+}
+
+.progress-card {
+  margin-top: 2rem;
+  max-width: 30rem;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 1rem 1.15rem 1.05rem;
+}
+
+.progress-card .progress-note {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.link-button {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--signal);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.page-head .progress {
+  margin-top: 1.5rem;
+  max-width: 28rem;
+}
+
+/* Checkbox toggle on article pages */
+.done-toggle {
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.done-toggle input,
+.row-check {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  border: 2px solid #9aa2c0;
+  border-radius: 6px;
+  background: var(--paper);
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.done-toggle input::before,
+.row-check::before {
+  content: "";
+  width: 0.62rem;
+  height: 0.62rem;
+  transform: scale(0);
+  transition: transform 0.12s ease;
+  background: #fff;
+  clip-path: polygon(14% 44%, 0 59%, 40% 100%, 100% 22%, 86% 8%, 39% 70%);
+}
+
+.done-toggle input:checked,
+.row-check:checked {
+  background: #1f9d6b;
+  border-color: #1f9d6b;
+}
+
+.done-toggle input:checked::before,
+.row-check:checked::before {
+  transform: scale(1);
+}
+
+.done-toggle input:focus-visible,
+.row-check:focus-visible {
+  outline: 3px solid var(--signal);
+  outline-offset: 2px;
+}
+
+.page-head .done-toggle {
+  padding: 0.3rem 0.75rem 0.3rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.finish-card {
+  margin-top: 3rem;
+  padding: 1.25rem 1.4rem;
+  border-radius: 16px;
+  background: var(--wash);
+  display: grid;
+  gap: 1rem;
+}
+
+.finish-card .done-toggle {
+  font-size: 1.05rem;
+}
+
+.finish-card .done-toggle input {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Checkboxes in article lists */
+html.js .article-list li[data-progress-row],
+html.js .path-list li[data-progress-row] {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  column-gap: 0.9rem;
+  align-items: start;
+}
+
+html.js .article-list li[data-progress-row] .row-check {
+  margin-top: 1.4rem;
+}
+
+html.js .path-list li[data-progress-row] .row-check {
+  margin-top: 0.85rem;
+}
+
+.is-done .title,
+.is-done .path-title {
+  color: var(--muted);
+}
+
+.is-done .num,
+.is-done .path-num {
+  color: #1f9d6b;
+}
+
+/* Small progress text on the home topic list */
+html.js .topic-progress.has-progress {
+  color: #1f9d6b;
+}
+
+/* ---------- Author bio and social links ---------- */
+
+.hero-byline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  margin: 0 0 1.5rem;
+  font-family: var(--font-display);
+  color: var(--ink-soft);
+}
+
+.hero-byline a.name {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hero-byline a.name:hover {
+  color: var(--signal);
+}
+
+.social-links {
+  display: flex;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.social-links a {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+.social-links a:hover {
+  border-color: var(--signal);
+  color: var(--signal);
+  background: var(--signal-tint);
+}
+
+.social-links svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.about-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+/* ---------- About page ---------- */
+
+.about-hero {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+.about-hero img {
+  width: 11rem;
+  height: 11rem;
+  border-radius: 24px;
+  object-fit: cover;
+  box-shadow: 8px 8px 0 var(--marker);
+}
+
+.about-hero .lead {
+  margin-top: 0.25rem;
+}
+
+.about-hero .social-links {
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .about-hero {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .about-hero img {
+    width: 8rem;
+    height: 8rem;
+  }
+}
+
+.glance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+}
+
+.glance div {
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+}
+
+.glance dt {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.glance dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.timeline {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  border-left: 2px solid var(--rule);
+}
+
+.timeline li {
+  position: relative;
+  padding: 0 0 1.5rem 1.5rem;
+  margin: 0;
+}
+
+.timeline li::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 0.45rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--signal);
+}
+
+.timeline li.now::before {
+  background: var(--marker);
+  border-color: var(--ink);
+}
+
+.timeline .when {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--signal-deep);
+}
+
+.timeline .what {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ink);
+  margin: 0.1rem 0 0.2rem;
+}
+
+.timeline p {
+  margin: 0;
+}
+
+.profile-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.profile-list a {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.profile-list a:hover {
+  border-color: var(--signal);
+  background: var(--signal-tint);
+}
+
+.profile-list svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  color: var(--signal);
+  flex: none;
+}
+
+.profile-list small {
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+html.js .needs-js.row-check {
+  display: inline-grid !important;
+}
+
+a.byline {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+a.byline:hover {
+  color: var(--signal);
+}
+
+.progress-head {
+  flex-wrap: wrap;
+  row-gap: 0.15rem;
+}
+
+.progress-head span {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .portrait {
+    margin-bottom: 5rem;
+  }
+  .trace-card {
+    bottom: -4.25rem;
+  }
 }

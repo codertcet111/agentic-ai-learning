@@ -14,10 +14,11 @@ A self-contained **HTML + CSS** blog about building agentic AI systems, publishe
 │   ├── js/site.js             # Opens and closes the Topics menu
 │   ├── fonts/                 # Bricolage Grotesque, Literata, JetBrains Mono (self-hosted)
 │   └── images/
-│       ├── author/            # original.jpg plus the cropped, duotone and avatar versions
+│       ├── author/            # original.jpg plus the cropped portrait and avatar
 │       ├── langfuse/          # Langfuse screenshots
 │       ├── og-default.png     # Preview image for links shared on social media
 │       └── favicon.svg
+├── about/                     # About Shubham: experience timeline and profile links
 ├── agentic-development/       # The 20-step path (steps/ holds each step)
 ├── graph-orchestration/  data-patterns/  rag-knowledge/  evaluation/
 ├── build-guides/  langfuse-lab/  llm-engineering/  prompts-tools/
@@ -70,6 +71,10 @@ To get the site into Google faster:
 4. Optionally do the same in [Bing Webmaster Tools](https://www.bing.com/webmasters), which can import the site straight from Search Console.
 
 New sites usually take a few days to a few weeks to appear in results.
+
+## Reading progress
+
+Readers can tick articles as complete, on the article itself or in any list. Progress bars on the home page, section pages and at the end of each article update straight away. Everything is stored in one cookie (`afn_progress`) in the reader's own browser, as short article ids; nothing is sent to a server. Article ids are derived from the section and file name, so renaming an article's file resets its tick. The logic is in `assets/js/site.js`.
 
 ## Writing and editing articles
 

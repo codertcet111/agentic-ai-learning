@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Security for AI | Agentic Field Notes</title>
   <meta name="description" content="Threat models and patterns for auth-forwarding orchestrators.">
-  <meta name="author" content="AI application developer">
+  <meta name="author" content="Shubham Mishra">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#ffffff">
   <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/security-ai/">
@@ -30,13 +30,13 @@
     <nav class="primary-nav" aria-label="Primary">
       <a class="nav-link" href="../agentic-development/index.html">Start here</a>
       <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-      <a class="nav-link" href="../index.html#about">About</a>
+      <a class="nav-link" href="../about/index.html">About</a>
       <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
     </nav>
   </div>
   <div class="topics-panel" id="topics-panel" hidden>
     <div class="topics-inner">
-      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../index.html#about">About</a></div>
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../about/index.html">About</a></div>
       <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html" aria-current="page"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
     </div>
   </div>
@@ -47,21 +47,23 @@
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span aria-current="page">Security for AI</span></nav>
     <h1>Security for AI</h1>
     <p class="lead">Threat models and patterns for auth-forwarding orchestrators.</p>
+    <div class="progress needs-js" data-progress-ids="hadu ryhc g4d1 7mur" data-empty-text="Tick articles as you finish them"><div class="progress-head"><strong>Your progress</strong><span data-progress-text>0 of 4 complete</span></div><div class="progress-track" role="progressbar" aria-label="Your progress" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0"><div class="progress-fill"></div></div></div>
   </div>
 </header>
 <div class="prose wide">
 
-<ul class="article-list"><li><a href="token-forwarding.html"><span class="title">Token forwarding, never token storage</span><span class="time">2 min</span><span class="desc">Secure an AI orchestrator with token forwarding instead of token storage: per-request context, no shared cookie jars, scoped outbound calls and redaction at every exit.</span></a></li><li><a href="three-layer-authz.html"><span class="title">Three-layer authorization</span><span class="time">2 min</span><span class="desc">Apply three layers of authorization in AI agents: what the planner is shown, what the orchestrator allows at invoke time and what the upstream API finally enforces.</span></a></li><li><a href="write-confirmation.html"><span class="title">Writes and explicit confirmation</span><span class="time">2 min</span><span class="desc">Protect data-changing actions in AI assistants with explicit confirmation: graph-enforced confirmation steps, fingerprints, explicit action flags and operation ids against duplicates.</span></a></li><li><a href="eval-trace-signing.html"><span class="title">Signed eval traces</span><span class="time">1 min</span><span class="desc">Sign automated evaluation traffic so CI runs can be identified, routed to experiment traces and given test-only behaviour, without exposing signing keys to production.</span></a></li></ul>
+<ul class="article-list"><li data-progress-row><input type="checkbox" class="row-check needs-js" data-progress-id="hadu" aria-label="Mark Token forwarding, never token storage as complete"><a href="token-forwarding.html"><span class="title">Token forwarding, never token storage</span><span class="time">2 min</span><span class="desc">Secure an AI orchestrator with token forwarding instead of token storage: per-request context, no shared cookie jars, scoped outbound calls and redaction at every exit.</span></a></li><li data-progress-row><input type="checkbox" class="row-check needs-js" data-progress-id="ryhc" aria-label="Mark Three-layer authorization as complete"><a href="three-layer-authz.html"><span class="title">Three-layer authorization</span><span class="time">2 min</span><span class="desc">Apply three layers of authorization in AI agents: what the planner is shown, what the orchestrator allows at invoke time and what the upstream API finally enforces.</span></a></li><li data-progress-row><input type="checkbox" class="row-check needs-js" data-progress-id="g4d1" aria-label="Mark Writes and explicit confirmation as complete"><a href="write-confirmation.html"><span class="title">Writes and explicit confirmation</span><span class="time">2 min</span><span class="desc">Protect data-changing actions in AI assistants with explicit confirmation: graph-enforced confirmation steps, fingerprints, explicit action flags and operation ids against duplicates.</span></a></li><li data-progress-row><input type="checkbox" class="row-check needs-js" data-progress-id="7mur" aria-label="Mark Signed eval traces as complete"><a href="eval-trace-signing.html"><span class="title">Signed eval traces</span><span class="time">1 min</span><span class="desc">Sign automated evaluation traffic so CI runs can be identified, routed to experiment traces and given test-only behaviour, without exposing signing keys to production.</span></a></li></ul>
 </div>
   </main>
   <footer class="site-footer">
   <div class="footer-inner">
     <div class="footer-author">
       <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
-      <div><strong>Agentic Field Notes</strong>Notes on building AI agents, written by an AI application developer.</div>
+      <div><strong>Shubham Mishra</strong>Notes on building AI agents, written by Shubham Mishra.</div>
     </div>
     <nav class="footer-links" aria-label="Footer">
       <a href="../agentic-development/index.html">20-step path</a>
+      <a href="../about/index.html">About</a>
       <a href="https://github.com/codertcet111">GitHub</a>
       <a href="../sitemap.xml">Sitemap</a>
     </nav>

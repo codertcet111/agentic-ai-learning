@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import html
+import zlib
 import re
 import sys
 from pathlib import Path
@@ -505,10 +506,65 @@ OTHER_SECTIONS: dict[str, dict] = {
 
 SITE_NAME = "Agentic Field Notes"
 # Shown in the byline, footer and About section. Leave empty for a generic byline.
-AUTHOR_NAME = os.environ.get("AUTHOR_NAME", "")
+AUTHOR_NAME = os.environ.get("AUTHOR_NAME", "Shubham Mishra")
 AUTHOR_ROLE = "AI application developer"
 GITHUB_URL = "https://github.com/codertcet111"
 REPO_URL = "https://github.com/codertcet111/agentic-ai-learning"
+
+# Profiles shown as icon links on the home page and listed on the About page.
+# Icons are simple generic glyphs (not company logos); the name is in the label and tooltip.
+ICON_PATHS = {
+    "briefcase": '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/>',
+    "pen": '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    "code": '<path d="m8 6-6 6 6 6"/><path d="m16 6 6 6-6 6"/>',
+    "trophy": '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>',
+    "flask": '<path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/>',
+}
+SOCIAL_LINKS = [
+    ("LinkedIn", "https://www.linkedin.com/in/shubham-mishra-7bb124193/", "briefcase", "Career and experience"),
+    ("Blogger", "https://www.blogger.com/profile/09898046087967419538", "pen", "My other tech blogs"),
+    ("GitHub", "https://github.com/codertcet111", "code", "Code and this site's source"),
+    ("HackerEarth", "https://www.hackerearth.com/@shubham42", "trophy", "Coding challenges"),
+    ("ResearchGate", "https://www.researchgate.net/profile/Shubham_Mishra39", "flask", "Research and papers"),
+]
+
+
+def icon_svg(name: str) -> str:
+    return (f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+            f'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{ICON_PATHS[name]}</svg>')
+
+
+def social_icons_html() -> str:
+    items = "".join(
+        f'<li><a href="{url}" rel="me noopener" target="_blank" aria-label="{name}" title="{name}">{icon_svg(icon)}</a></li>'
+        for name, url, icon, _ in SOCIAL_LINKS
+    )
+    return f'<ul class="social-links">{items}</ul>'
+
+
+def progress_id(key: str) -> str:
+    """Short, stable id for an article, stored in the progress cookie."""
+    n = zlib.crc32(key.encode("utf-8")) % (36 ** 4)
+    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+    out = ""
+    for _ in range(4):
+        n, r = divmod(n, 36)
+        out = digits[r] + out
+    return out
+
+
+def progress_bar(ids: list[str], label: str, empty_text: str = "") -> str:
+    total = len(ids)
+    empty = f' data-empty-text="{esc(empty_text)}"' if empty_text else ""
+    return (f'<div class="progress needs-js" data-progress-ids="{" ".join(ids)}"{empty}>'
+            f'<div class="progress-head"><strong>{esc(label)}</strong><span data-progress-text>0 of {total} complete</span></div>'
+            f'<div class="progress-track" role="progressbar" aria-label="{esc(label)}" aria-valuemin="0" '
+            f'aria-valuemax="{total}" aria-valuenow="0"><div class="progress-fill"></div></div></div>')
+
+
+def row_check(pid: str, title: str) -> str:
+    return (f'<input type="checkbox" class="row-check needs-js" data-progress-id="{pid}" '
+            f'aria-label="Mark {esc(title)} as complete">')
 
 TOPIC_GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
     ("Build the system", [
@@ -572,6 +628,7 @@ def header_html(prefix: str, current: str | None) -> str:
         )
         groups.append(f'<div class="topic-group"><h2>{esc(gtitle)}</h2><ul>{lis}</ul></div>')
     start_current = CURRENT_ATTR if current == "agentic-development" else ""
+    about_current = CURRENT_ATTR if current == "about" else ""
     groups_html = "".join(groups)
     return f"""<header class="site-header">
   <div class="header-inner">
@@ -579,13 +636,13 @@ def header_html(prefix: str, current: str | None) -> str:
     <nav class="primary-nav" aria-label="Primary">
       <a class="nav-link" href="{prefix}agentic-development/index.html"{start_current}>Start here</a>
       <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics {CHEVRON}</button>
-      <a class="nav-link" href="{prefix}index.html#about">About</a>
+      <a class="nav-link" href="{prefix}about/index.html"{about_current}>About</a>
       <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
     </nav>
   </div>
   <div class="topics-panel" id="topics-panel" hidden>
     <div class="topics-inner">
-      <div class="topics-mobile-links"><a class="primary" href="{prefix}agentic-development/index.html">Start the 20-step path</a><a href="{prefix}index.html#about">About</a></div>
+      <div class="topics-mobile-links"><a class="primary" href="{prefix}agentic-development/index.html">Start the 20-step path</a><a href="{prefix}about/index.html">About</a></div>
       {groups_html}
     </div>
   </div>
@@ -602,6 +659,7 @@ def footer_html(prefix: str) -> str:
     </div>
     <nav class="footer-links" aria-label="Footer">
       <a href="{prefix}agentic-development/index.html">20-step path</a>
+      <a href="{prefix}about/index.html">About</a>
       <a href="{GITHUB_URL}">GitHub</a>
       <a href="{prefix}sitemap.xml">Sitemap</a>
     </nav>
@@ -673,27 +731,37 @@ def document(*, title: str, description: str, canonical_path: str, depth: int,
 
 
 def author_schema() -> dict:
-    return {"@type": "Person", "name": AUTHOR_NAME or AUTHOR_ROLE, "url": GITHUB_URL}
+    return {"@type": "Person", "name": AUTHOR_NAME or AUTHOR_ROLE, "url": SITE_URL + "/about/",
+            "jobTitle": AUTHOR_ROLE, "sameAs": [url for _, url, _, _ in SOCIAL_LINKS]}
 
 
 def article_page(*, section_id: str, title: str, description: str, canonical_path: str,
                  depth: int, crumbs: list[tuple[str, str | None]], body: str,
-                 jargon: dict[str, str], nav_html: str, heading: str | None = None) -> str:
+                 jargon: dict[str, str], nav_html: str, heading: str | None = None,
+                 pid: str = "", section_ids: list[str] | None = None, section_title: str = "") -> str:
     prefix = "../" * depth
     minutes = reading_time(body)
-    byline = (f'<span class="byline"><img src="{prefix}assets/images/author/avatar.jpg" alt="" width="28" height="28">'
-              f'{esc(AUTHOR_NAME)}</span>') if AUTHOR_NAME else ""
+    byline = (f'<a class="byline" href="{prefix}about/index.html"><img src="{prefix}assets/images/author/avatar.jpg" alt="" width="28" height="28">'
+              f'{esc(AUTHOR_NAME)}</a>') if AUTHOR_NAME else ""
+    toggle = (f'<label class="done-toggle needs-js"><input type="checkbox" data-progress-id="{pid}">'
+              f'<span>Mark as complete</span></label>') if pid else ""
+    finish = ""
+    if pid:
+        finish = (f'<div class="finish-card needs-js"><label class="done-toggle needs-js">'
+                  f'<input type="checkbox" data-progress-id="{pid}"><span>I have finished this article</span></label>'
+                  f'{progress_bar(section_ids or [pid], "Your progress in " + section_title)}</div>')
     main = f"""<header class="page-head grid-paper">
   <div class="page-head-inner">
     {breadcrumb_html(crumbs)}
     <h1>{esc(heading or title)}</h1>
     <p class="lead">{esc(description)}</p>
-    <p class="meta">{byline}<span>{minutes} min read</span></p>
+    <p class="meta">{byline}<span>{minutes} min read</span>{toggle}</p>
   </div>
 </header>
 <article class="prose">
 {body}
 {jargon_html(jargon)}
+{finish}
 {nav_html}
 </article>"""
     schema = {
@@ -711,12 +779,14 @@ def article_page(*, section_id: str, title: str, description: str, canonical_pat
 
 
 def index_page(*, section_id: str, title: str, intro: str, canonical_path: str,
-               list_html: str, extra: str = "") -> str:
+               list_html: str, extra: str = "", progress_ids: list[str] | None = None) -> str:
+    bar = progress_bar(progress_ids, "Your progress", "Tick articles as you finish them") if progress_ids else ""
     main = f"""<header class="page-head grid-paper wide">
   <div class="page-head-inner">
     {breadcrumb_html([("Home", "../index.html"), (title, None)])}
     <h1>{esc(title)}</h1>
     <p class="lead">{esc(intro)}</p>
+    {bar}
   </div>
 </header>
 <div class="prose wide">
@@ -755,14 +825,17 @@ def write_agentic_pages() -> list[str]:
     section_dir = ROOT / "agentic-development"
     (section_dir / "steps").mkdir(parents=True, exist_ok=True)
 
+    ids = [progress_id(f"agentic-development/{s['slug']}") for s in AGENTIC_STEPS]
     items = []
     for i, s in enumerate(AGENTIC_STEPS, 1):
         d, b = load_article("agentic-development", s["slug"])
         s["_desc"] = d or s["desc"]
         s["_body"] = b or s["body"]
+        label = step_label(s["title"])
         items.append(
-            f'<li><a href="steps/{s["slug"]}.html"><span class="num">{i:02d}</span>'
-            f'<span class="title">{esc(step_label(s["title"]))}</span>'
+            f'<li data-progress-row>{row_check(ids[i - 1], label)}'
+            f'<a href="steps/{s["slug"]}.html"><span class="num">{i:02d}</span>'
+            f'<span class="title">{esc(label)}</span>'
             f'<span class="time">{reading_time(s["_body"])} min</span>'
             f'<span class="desc">{esc(s["_desc"])}</span></a></li>'
         )
@@ -778,6 +851,7 @@ def write_agentic_pages() -> list[str]:
             canonical_path="/static-blog/agentic-development/",
             list_html=f'<ol class="article-list numbered">{items_html}</ol>',
             extra=intro_extra,
+            progress_ids=ids,
         ),
         encoding="utf-8",
     )
@@ -802,6 +876,9 @@ def write_agentic_pages() -> list[str]:
                 body=step["_body"] + dev_html,
                 jargon=step["jargon"],
                 nav_html=nav_pair(prev, nxt),
+                pid=ids[i - 1],
+                section_ids=ids,
+                section_title="the 20-step path",
             ),
             encoding="utf-8",
         )
@@ -818,12 +895,13 @@ def write_other_sections() -> list[str]:
         for slug, title, _visual, body, jargon in meta["pages"]:
             d, b = load_article(section_id, slug)
             loaded.append((slug, title, d or title, b or body, jargon))
+        ids = [progress_id(f"{section_id}/{slug}") for slug, *_ in loaded]
 
         items = "".join(
-            f'<li><a href="{slug}.html"><span class="title">{esc(title)}</span>'
+            f'<li data-progress-row>{row_check(pid, title)}<a href="{slug}.html"><span class="title">{esc(title)}</span>'
             f'<span class="time">{reading_time(body)} min</span>'
             f'<span class="desc">{esc(desc)}</span></a></li>'
-            for slug, title, desc, body, _ in loaded
+            for pid, (slug, title, desc, body, _) in zip(ids, loaded)
         )
         (section_dir / "index.html").write_text(
             index_page(
@@ -832,6 +910,7 @@ def write_other_sections() -> list[str]:
                 intro=meta["index_intro"],
                 canonical_path=f"/static-blog/{section_id}/",
                 list_html=f'<ul class="article-list">{items}</ul>',
+                progress_ids=ids,
             ),
             encoding="utf-8",
         )
@@ -852,6 +931,9 @@ def write_other_sections() -> list[str]:
                     body=expand_body(body, 1),
                     jargon=jargon,
                     nav_html=nav_pair(prev, nxt),
+                    pid=ids[i],
+                    section_ids=ids,
+                    section_title=meta["title"],
                 ),
                 encoding="utf-8",
             )
@@ -859,45 +941,52 @@ def write_other_sections() -> list[str]:
     return paths
 
 
-def write_home(counts: dict[str, int]) -> None:
-    total = sum(counts.values())
+def write_home(section_ids: dict[str, list[str]]) -> None:
+    all_ids = [pid for ids in section_ids.values() for pid in ids]
+    total = len(all_ids)
+    path_ids = section_ids["agentic-development"]
     path_items = "".join(
-        f'<li><a href="agentic-development/steps/{s["slug"]}.html">'
+        f'<li data-progress-row>{row_check(path_ids[i - 1], step_label(s["title"]))}'
+        f'<a href="agentic-development/steps/{s["slug"]}.html">'
         f'<span class="path-num">{i:02d}</span><span class="path-title">{esc(step_label(s["title"]))}</span></a></li>'
         for i, s in enumerate(AGENTIC_STEPS, 1)
     )
     columns = []
     for gtitle, items in TOPIC_GROUPS:
-        lis = "".join(
-            f'<li><a href="{sid}/index.html"><span class="topic-name">{esc(title)}</span>'
-            f'<span class="topic-desc">{esc(desc)}</span>'
-            f'<span class="topic-count">{counts.get(sid, 0)} articles</span></a></li>'
-            for sid, title, desc in items
-        )
-        columns.append(f'<div><h3 class="group-title">{esc(gtitle)}</h3><ul>{lis}</ul></div>')
+        lis = []
+        for sid, title, desc in items:
+            ids = section_ids.get(sid, [])
+            lis.append(
+                f'<li><a href="{sid}/index.html"><span class="topic-name">{esc(title)}</span>'
+                f'<span class="topic-desc">{esc(desc)}</span>'
+                f'<span class="topic-count topic-progress" data-progress-ids="{" ".join(ids)}" '
+                f'data-empty-text="{len(ids)} articles"><span data-progress-text>{len(ids)} articles</span></span></a></li>'
+            )
+        columns.append(f'<div><h3 class="group-title">{esc(gtitle)}</h3><ul>{"".join(lis)}</ul></div>')
     columns_html = "".join(columns)
 
-    about_name = f"I'm {esc(AUTHOR_NAME)}, an {AUTHOR_ROLE}." if AUTHOR_NAME else f"These notes are written by an {AUTHOR_ROLE}."
     portrait_alt = f"Portrait of {esc(AUTHOR_NAME)}" if AUTHOR_NAME else "Portrait of the author"
+    progress_card = (
+        '<div class="progress-card needs-js">'
+        + progress_bar(all_ids, "Your reading progress", "Tick articles as you finish them")
+        + '<p class="progress-note"><span>Saved in a cookie in this browser only.</span>'
+        '<button type="button" class="link-button" data-progress-reset hidden>Reset progress</button></p></div>'
+    )
     main = f"""<section class="hero grid-paper" aria-labelledby="hero-title">
   <div class="hero-inner">
     <div>
       <h1 id="hero-title">Building agentic systems that survive production</h1>
       <p class="hero-lede">Practical notes on orchestration graphs, MongoDB data planes, retrieval, evaluation and tracing, for engineers shipping copilots and tool-using agents.</p>
+      <div class="hero-byline"><span>By <a class="name" href="about/index.html">{esc(AUTHOR_NAME)}</a></span>{social_icons_html()}</div>
       <div class="hero-actions">
         <a class="button primary" href="agentic-development/index.html">Start the 20-step path</a>
         <a class="button secondary" href="#topics">Browse all topics</a>
       </div>
-      <ul class="hero-facts">
-        <li><strong>{total}</strong> articles</li>
-        <li><strong>{len(TOPIC_INFO)}</strong> topics</li>
-        <li>Free and open on <a href="{REPO_URL}">GitHub</a></li>
-      </ul>
+      {progress_card}
     </div>
     <figure class="portrait">
       <div class="portrait-frame">
-        <img class="photo-duo" src="assets/images/author/portrait-duotone.jpg" alt="{portrait_alt}" width="720" height="900" fetchpriority="high">
-        <img class="photo-color" src="assets/images/author/portrait.jpg" alt="" width="720" height="900" loading="lazy">
+        <img src="assets/images/author/portrait.jpg" alt="{portrait_alt}" width="720" height="900" fetchpriority="high">
       </div>
       <figcaption class="trace-card" aria-label="An example agent trace">
         <p>chat-turn &middot; 2.8 s</p>
@@ -917,7 +1006,7 @@ def write_home(counts: dict[str, int]) -> None:
   <div class="section-head">
     <div>
       <h2 id="path-title">The 20-step path</h2>
-      <p>One lesson at a time, from the first architecture decision to a tested, traceable agent.</p>
+      <p>One lesson at a time, from the first architecture decision to a tested, traceable agent. Tick each step as you finish it.</p>
     </div>
     <a href="agentic-development/index.html">See every step with summaries</a>
   </div>
@@ -928,7 +1017,7 @@ def write_home(counts: dict[str, int]) -> None:
   <div class="section-head">
     <div>
       <h2 id="topics-title">Topics</h2>
-      <p>Deeper dives, grouped by what you are working on.</p>
+      <p>{total} articles, grouped by what you are working on.</p>
     </div>
   </div>
   <div class="topic-columns">{columns_html}</div>
@@ -938,9 +1027,10 @@ def write_home(counts: dict[str, int]) -> None:
   <div class="about">
     <img src="assets/images/author/avatar.jpg" alt="" width="96" height="96" loading="lazy">
     <div>
-      <h2 id="about-title">About these notes</h2>
-      <p>{about_name} I build assistants that plan, call real business APIs and keep conversations consistent under load. This site collects what worked, what broke, and the patterns I would use again.</p>
-      <p>Examples stay generic so you can map them to your own stack. The site is plain HTML and CSS, with no tracking and no ads. The source is on <a href="{REPO_URL}">GitHub</a>.</p>
+      <h2 id="about-title">About me</h2>
+      <p>I'm {esc(AUTHOR_NAME)}. I have built web products with Ruby on Rails since 2017, shipped iOS apps in Swift from 2017 to 2020, and spent four years on React before coming back to it in 2026. Since March 2026 I have been building agentic AI systems, and AI automation is where most of my curiosity goes now.</p>
+      <p>This site collects what worked, what broke, and the patterns I would use again. It is plain HTML and CSS, with no ads and no tracking.</p>
+      <div class="about-actions"><a class="button secondary" href="about/index.html">More about me</a>{social_icons_html()}</div>
     </div>
   </div>
 </section>"""
@@ -968,6 +1058,82 @@ def write_home(counts: dict[str, int]) -> None:
     )
 
 
+def write_about() -> None:
+    (ROOT / "about").mkdir(exist_ok=True)
+    profiles = "".join(
+        f'<li><a href="{url}" rel="me noopener" target="_blank">{icon_svg(icon)}<span>{name}</span><small>{esc(note)}</small></a></li>'
+        for name, url, icon, note in SOCIAL_LINKS
+    )
+    timeline = [
+        ("2017 to 2020", "iOS with Swift", "Three years of native iOS development at the start of my career.", False),
+        ("2017 to today", "Ruby on Rails", "About nine years of building web applications with Rails, and still part of my daily work.", False),
+        ("Earlier in my career", "React", "Four years of front-end development with React.", False),
+        ("2026", "Back to React", "Returned to React this year, now for chat and agent interfaces.", False),
+        ("March 2026 to today", "Agentic AI development", "Designing and building agent backends: orchestration graphs, tool catalogs, MongoDB data planes, retrieval, evaluation and tracing. Most of this site comes from this work.", True),
+    ]
+    now_attr = ' class="now"'
+    tl = "".join(
+        f'<li{now_attr if now else ""}><span class="when">{esc(when)}</span><span class="what">{esc(what)}</span><p>{esc(text)}</p></li>'
+        for when, what, text, now in timeline
+    )
+    main = f"""<header class="page-head grid-paper wide">
+  <div class="page-head-inner">
+    {breadcrumb_html([("Home", "../index.html"), ("About", None)])}
+    <div class="about-hero">
+      <img src="../assets/images/author/portrait.jpg" alt="Portrait of {esc(AUTHOR_NAME)}" width="720" height="900">
+      <div>
+        <h1>{esc(AUTHOR_NAME)}</h1>
+        <p class="lead">Software engineer building agentic AI systems, with a long background in Ruby on Rails, React and iOS.</p>
+        {social_icons_html()}
+      </div>
+    </div>
+  </div>
+</header>
+<div class="prose">
+<h2>At a glance</h2>
+<dl class="glance">
+  <div><dt>Ruby on Rails</dt><dd>Since 2017, about nine years</dd></div>
+  <div><dt>Agentic AI</dt><dd>Building agents since March 2026</dd></div>
+  <div><dt>React</dt><dd>Four years earlier, and again since 2026</dd></div>
+  <div><dt>iOS with Swift</dt><dd>Three years, 2017 to 2020</dd></div>
+</dl>
+
+<h2>What I work on now</h2>
+<p>Since March 2026 my focus has been agentic AI: assistants that plan, call real business APIs on a user's behalf, pause for confirmation and keep conversations consistent under load. Years of Rails work shape how I approach it: business rules belong in the domain services, the agent orchestrates, and every write needs a clear owner.</p>
+<p>I am especially interested in <strong>AI automation</strong>: taking repetitive, multi-step work that people do across several tools and handing it to agents that are observable, testable and safe to run.</p>
+
+<h2>Experience</h2>
+<ol class="timeline">{tl}</ol>
+
+<h2>About this site</h2>
+<p>Agentic Field Notes is where I write down patterns from building agent backends: the <a href="../agentic-development/index.html">20-step path</a> from first boundary to golden tests, and deeper notes on <a href="../graph-orchestration/index.html">graph orchestration</a>, <a href="../data-patterns/index.html">MongoDB patterns</a>, <a href="../rag-knowledge/index.html">retrieval</a>, <a href="../evaluation/index.html">evaluation</a> and <a href="../langfuse-lab/index.html">tracing with Langfuse</a>. Examples are generic on purpose, so you can map them onto your own domain.</p>
+<p>The site is plain HTML, CSS and a little JavaScript, hosted free on GitHub Pages. Your reading progress is stored in a cookie in your own browser and is never sent anywhere. The source is on <a href="{REPO_URL}">GitHub</a>.</p>
+
+<h2>Find me elsewhere</h2>
+<ul class="profile-list">{profiles}</ul>
+</div>"""
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "ProfilePage",
+        "name": f"About {AUTHOR_NAME}",
+        "url": SITE_URL + "/about/",
+        "mainEntity": author_schema(),
+    }
+    (ROOT / "about" / "index.html").write_text(
+        document(
+            title=f"About {AUTHOR_NAME}",
+            description=f"{AUTHOR_NAME}: software engineer building agentic AI systems, with a background in Ruby on Rails since 2017, React and iOS.",
+            canonical_path="/static-blog/about/",
+            depth=1,
+            main=main,
+            current="about",
+            schema=schema,
+            og_type="profile",
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_404() -> None:
     # GitHub Pages serves 404.html for a missing path at any depth, so links here are absolute.
     base = SITE_URL
@@ -986,7 +1152,7 @@ def write_404() -> None:
     )
     page = page.replace('href="assets/', f'href="{base}/assets/').replace('src="assets/', f'src="{base}/assets/')
     page = page.replace('href="index.html', f'href="{base}/index.html').replace('href="agentic-development/', f'href="{base}/agentic-development/')
-    page = re.sub(r'href="(graph-orchestration|data-patterns|build-guides|llm-engineering|prompts-tools|rag-knowledge|evaluation|langfuse-lab|testing-ai-dev|security-ai)/', rf'href="{base}/\1/', page)
+    page = re.sub(r'href="(about|graph-orchestration|data-patterns|build-guides|llm-engineering|prompts-tools|rag-knowledge|evaluation|langfuse-lab|testing-ai-dev|security-ai)/', rf'href="{base}/\1/', page)
     page = page.replace('href="sitemap.xml"', f'href="{base}/sitemap.xml"')
     page = page.replace('<meta name="robots" content="index, follow">', '<meta name="robots" content="noindex">')
     (ROOT / "404.html").write_text(page, encoding="utf-8")
@@ -1017,19 +1183,23 @@ def write_robots() -> None:
 def main() -> None:
     paths: list[str] = []
     paths.extend(write_agentic_pages())
-    other = write_other_sections()
-    paths.extend(other)
-    counts = {"agentic-development": len(AGENTIC_STEPS)}
-    for p in other:
-        sid, name = p.split("/", 1)
-        if name != "index.html":
-            counts[sid] = counts.get(sid, 0) + 1
-    write_home(counts)
+    paths.extend(write_other_sections())
+    section_ids: dict[str, list[str]] = {}
+    for p in paths:
+        parts = p.split("/")
+        if parts[-1] == "index.html":
+            continue
+        key = f"{parts[0]}/{parts[-1].removesuffix('.html')}"
+        section_ids.setdefault(parts[0], []).append(progress_id(key))
+    all_ids = [i for ids in section_ids.values() for i in ids]
+    assert len(all_ids) == len(set(all_ids)), "progress id collision: rename an article slug"
+    write_home(section_ids)
+    write_about()
     write_404()
-    write_sitemap(["index.html"] + paths)
+    write_sitemap(["index.html", "about/index.html"] + paths)
     write_robots()
     (ROOT / ".nojekyll").write_text("", encoding="utf-8")
-    print(f"Generated {len(paths) + 2} pages under {ROOT}")
+    print(f"Generated {len(paths) + 3} pages under {ROOT}")
 
 
 if __name__ == "__main__":

@@ -1,24 +1,12 @@
 """Build author photo assets for the blog from one source portrait.
 
-Usage: python3 make_author_images.py SOURCE.jpg SITE_ROOT [DISPLAY_FONT.ttf]
-Writes assets/images/author/{portrait.jpg, portrait-duotone.jpg, avatar.jpg}
-and, when a font is given, assets/images/og-default.png into SITE_ROOT.
+Usage: python3 scripts/make_author_images.py SOURCE.jpg SITE_ROOT [DISPLAY_FONT.ttf]
+Writes assets/images/author/{portrait.jpg, avatar.jpg} and, when a font is
+given, assets/images/og-default.png (the social preview image).
 """
 import sys
 from pathlib import Path
-from PIL import Image, ImageOps, ImageDraw, ImageFont, ImageEnhance
-
-SHADOW = (18, 22, 84)        # deep ink indigo
-MID = (92, 110, 255)         # signal blue, lifted
-HIGHLIGHT = (255, 249, 226)  # pale highlighter
-
-
-def duotone(img):
-    g = ImageOps.grayscale(img)
-    g = ImageOps.autocontrast(g, cutoff=1)
-    g = ImageEnhance.Contrast(g).enhance(1.12)
-    return ImageOps.colorize(g, black=SHADOW, white=HIGHLIGHT, mid=MID,
-                             blackpoint=0, whitepoint=255, midpoint=118)
+from PIL import Image, ImageDraw, ImageFont
 
 
 def main(src, root):
@@ -28,13 +16,14 @@ def main(src, root):
     w, h = im.size
     box = (int(w * 0.098), int(h * 0.026), int(w * 0.902), int(h * 0.026 + w * 0.804 * 1.25))
     crop = im.crop(box).resize((720, 900), Image.LANCZOS)
-    crop.save(out / "portrait.jpg", quality=84, optimize=True, progressive=True)
-    duo = duotone(crop)
-    duo.save(out / "portrait-duotone.jpg", quality=84, optimize=True, progressive=True)
+    crop.save(out / "portrait.jpg", quality=86, optimize=True, progressive=True)
     face = im.crop((int(w * 0.13), int(h * 0.035), int(w * 0.87), int(h * 0.035 + w * 0.74)))
-    duotone(face.resize((240, 240), Image.LANCZOS)).save(out / "avatar.jpg", quality=86, optimize=True)
+    face.resize((240, 240), Image.LANCZOS).save(out / "avatar.jpg", quality=88, optimize=True)
+    old = out / "portrait-duotone.jpg"
+    if old.exists():
+        old.unlink()
     print("wrote", sorted(p.name for p in out.iterdir()))
-    return duo
+    return crop
 
 
 def font(path, size, weight, width=100):
@@ -46,7 +35,7 @@ def font(path, size, weight, width=100):
     return f
 
 
-def og_image(duo, root, font_path):
+def og_image(photo, root, font_path):
     W, H = 1200, 630
     img = Image.new("RGB", (W, H), (255, 255, 255))
     d = ImageDraw.Draw(img)
@@ -59,7 +48,7 @@ def og_image(duo, root, font_path):
     d.rounded_rectangle([px + 14, py + 14, px + pw + 14, py + ph + 14], 26, fill=(255, 224, 102))
     mask = Image.new("L", (pw, ph), 0)
     ImageDraw.Draw(mask).rounded_rectangle([0, 0, pw, ph], 26, fill=255)
-    img.paste(duo.resize((pw, ph), Image.LANCZOS), (px, py), mask)
+    img.paste(photo.resize((pw, ph), Image.LANCZOS), (px, py), mask)
     ink = (18, 21, 43)
     title = font(font_path, 74, 800, 82)
     small = font(font_path, 26, 500)
@@ -73,12 +62,12 @@ def og_image(duo, root, font_path):
     for line in ["Building agentic", "systems that survive", "production"]:
         d.text((76, y), line, font=title, fill=ink)
         y += 78
-    d.text((80, y + 30), "Orchestration · MongoDB · RAG · Evals · Tracing", font=small, fill=(90, 96, 121))
+    d.text((80, y + 30), "By Shubham Mishra · Agents · RAG · Evals · Tracing", font=small, fill=(90, 96, 121))
     img.save(Path(root) / "assets" / "images" / "og-default.png", optimize=True)
     print("wrote og-default.png")
 
 
 if __name__ == "__main__":
-    duo_img = main(sys.argv[1], sys.argv[2])
+    photo = main(sys.argv[1], sys.argv[2])
     if len(sys.argv) > 3:
-        og_image(duo_img, sys.argv[2], sys.argv[3])
+        og_image(photo, sys.argv[2], sys.argv[3])
