@@ -439,20 +439,30 @@ IMAGE_PLACEHOLDERS = {
     "{{IMG_TRACES_LIST}}": "traces-list-errors.png",
     "{{IMG_SPAN_TREE}}": "trace-span-tree.png",
     "{{IMG_TRACE_DETAIL}}": "trace-detail-tokens-cost.png",
+    "{{IMG_ALERTS}}": "langfuse-alerts.png",
+    "{{IMG_SCORES}}": "langfuse-scores.png",
 }
 
 IMAGE_META = {
     "traces-list-errors.png": (
-        "Langfuse Tracing table with error statuses, latency, and token totals",
-        "Screenshot of the Langfuse traces list filtered by recent activity, showing failed and slow chat turns.",
+        "Langfuse Tracing view with the traces list, a selected turn's span tree and its attributes",
+        "The Tracing view: filters and the traces list on the left, the selected chat turn's span tree and attributes on the right.",
     ),
     "trace-span-tree.png": (
-        "Langfuse span tree with nested LLM and tool observations",
-        "Screenshot of a single trace expanded into a hierarchical span tree with per-node timing.",
+        "Langfuse span tree for one chat turn with nested router, agent, LLM and tool observations",
+        "One chat turn as a span tree: routing, the agent step, the planner call and two tool calls, each with its own time and cost.",
     ),
     "trace-detail-tokens-cost.png": (
-        "Langfuse observation detail with input, output, tokens, and cost",
-        "Screenshot of trace detail pane showing generation IO, token usage, and dollar cost.",
+        "Langfuse observation detail showing attributes and metadata including LLM calls and token counts",
+        "The detail pane for the turn: environment, release, routing mode, number of LLM and tool calls, and input and output tokens.",
+    ),
+    "langfuse-alerts.png": (
+        "Langfuse Alerts page with an alert rule for failed turns",
+        "The Alerts page in Langfuse with a rule that fires on failed turns.",
+    ),
+    "langfuse-scores.png": (
+        "Langfuse Scores table listing automated turn check results over time",
+        "Scores written by automated turn checks, listed per trace with a histogram of values over time.",
     ),
 }
 

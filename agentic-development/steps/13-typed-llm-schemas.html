@@ -3,34 +3,55 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Step 13 — Typed Pydantic outputs for every LLM call | Agentic Field Notes</title>
+  <title>Step 13: Typed Pydantic outputs for every LLM call | Agentic Field Notes</title>
   <meta name="description" content="Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.">
-  <meta name="author" content="AI Application Developer">
+  <meta name="author" content="AI application developer">
   <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
   <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/13-typed-llm-schemas.html">
-  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/13-typed-llm-schemas.html">
-  <meta property="og:title" content="Step 13 — Typed Pydantic outputs for every LLM call">
+  <link rel="icon" href="../../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
+  <meta property="og:title" content="Step 13: Typed Pydantic outputs for every LLM call">
   <meta property="og:description" content="Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.">
   <meta property="og:type" content="article">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/13-typed-llm-schemas.html">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../../assets/css/site.css">
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"TechArticle","headline":"Step 13 — Typed Pydantic outputs for every LLM call","description":"Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.","author":{"@type":"Person","name":"AI Application Developer"}}
-  </script>
-  
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Step 13: Typed Pydantic outputs for every LLM call", "description": "Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.", "url": "https://codertcet111.github.io/agentic-ai-learning/agentic-development/steps/13-typed-llm-schemas.html", "image": "https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png", "author": {"@type": "Person", "name": "AI application developer", "url": "https://github.com/codertcet111"}, "isPartOf": {"@type": "WebSite", "name": "Agentic Field Notes", "url": "https://codertcet111.github.io/agentic-ai-learning/"}}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header" id="site-header"></header>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../../agentic-development/index.html" aria-current="page">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../../index.html#about">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../../agentic-development/index.html">Start the 20-step path</a><a href="../../index.html#about">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../../agentic-development/index.html" aria-current="page"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
   <main id="main">
-    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../index.html">Agentic Development</a> / Step 13</nav>
-    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
-      <header class="article-header">
-        <h1 itemprop="headline">Step 13 — Typed Pydantic outputs for every LLM call</h1>
-        <p class="lead" itemprop="description">Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.</p>
-        <p class="meta">2 min read</p>
-      </header>
-      <div data-visual="graph"></div>
-      <p>An agent graph is only as reliable as the weakest LLM output it accepts. If any node parses free text with regular expressions or trusts a JSON blob without validating it, that node is where the 3 a.m. bug lives. The rule for this step is simple: every LLM call returns a Pydantic model.</p>
+<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../index.html">Home</a><span class="sep">/</span><a href="../index.html">Agentic Development</a><span class="sep">/</span><span aria-current="page">Step 13 of 20</span></nav>
+    <h1>Typed Pydantic outputs for every LLM call</h1>
+    <p class="lead">Bind every LLM call to a Pydantic output schema, validate strictly, repair once on failure and keep policy text in one place instead of scattered prompts.</p>
+    <p class="meta"><span>2 min read</span></p>
+  </div>
+</header>
+<article class="prose">
+<p>An agent graph is only as reliable as the weakest LLM output it accepts. If any node parses free text with regular expressions or trusts a JSON blob without validating it, that node is where the 3 a.m. bug lives. The rule for this step is simple: every LLM call returns a Pydantic model.</p>
 
 <h2>One schema per purpose</h2>
 <pre><code>from pydantic import BaseModel, Field
@@ -85,16 +106,27 @@ class ComposePayload(BaseModel):
 
 <h2>Schema changes are contract changes</h2>
 <p>When a schema changes, update in the same pull request: the prompt examples, the stub LLM fixtures (<a href="../../llm-engineering/llm-stub-ci.html">LLM_STUB</a>) and the golden cases that assert on it. CI that runs against stale stubs reports green while production breaks.</p>
-<div class="callout dev-pov"><strong>Developer POV:</strong> When schema changes, update stub LLM fixtures in the same PR or CI will lie.</div><p class="meta"><a href="12-graph-nodes-flow.html">← Previous</a> · <a href="14-argument-resolution.html">Next →</a></p>
-      
+<div class="callout dev-pov"><strong>Try this:</strong> When schema changes, update stub LLM fixtures in the same PR or CI will lie.</div>
 <section class="jargon" aria-labelledby="jargon-heading">
   <h2 id="jargon-heading">Terms on this page</h2>
   <dl><dt>Structured output</dt><dd>Model response parsed into a validated object, not free text.</dd><dt>Planner</dt><dd>LLM step that selects the next capability or completion.</dd><dt>Repair loop</dt><dd>Retry or fallback when validation fails.</dd></dl>
 </section>
-    </article>
+<nav class="post-nav" aria-label="More articles"><a class="prev" href="12-graph-nodes-flow.html"><small>Previous</small>Walk the node pipeline</a><a class="next" href="14-argument-resolution.html"><small>Next</small>Resolve arguments without smuggling ids</a></nav>
+</article>
   </main>
-  <footer class="site-footer" id="site-footer"></footer>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Agentic Field Notes</strong>Notes on building AI agents, written by an AI application developer.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../../agentic-development/index.html">20-step path</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
   <script src="../../assets/js/site.js" defer></script>
-  <script src="../../assets/js/visuals.js" defer></script>
 </body>
 </html>

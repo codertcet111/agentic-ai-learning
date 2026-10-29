@@ -5,32 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cost and rate limits | Agentic Field Notes</title>
   <meta name="description" content="Control LLM costs in production agents: per-turn token and call caps, model routing, prompt caching, catalog trimming, rate limits per tenant and budget alerts.">
-  <meta name="author" content="AI Application Developer">
+  <meta name="author" content="AI application developer">
   <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
   <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/build-guides/cost-controls.html">
-  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/build-guides/cost-controls.html">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
   <meta property="og:title" content="Cost and rate limits">
   <meta property="og:description" content="Control LLM costs in production agents: per-turn token and call caps, model routing, prompt caching, catalog trimming, rate limits per tenant and budget alerts.">
   <meta property="og:type" content="article">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/build-guides/cost-controls.html">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../assets/css/site.css">
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"TechArticle","headline":"Cost and rate limits","description":"Control LLM costs in production agents: per-turn token and call caps, model routing, prompt caching, catalog trimming, rate limits per tenant and budget alerts.","author":{"@type":"Person","name":"AI Application Developer"}}
-  </script>
-  
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Cost and rate limits", "description": "Control LLM costs in production agents: per-turn token and call caps, model routing, prompt caching, catalog trimming, rate limits per tenant and budget alerts.", "url": "https://codertcet111.github.io/agentic-ai-learning/build-guides/cost-controls.html", "image": "https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png", "author": {"@type": "Person", "name": "AI application developer", "url": "https://github.com/codertcet111"}, "isPartOf": {"@type": "WebSite", "name": "Agentic Field Notes", "url": "https://codertcet111.github.io/agentic-ai-learning/"}}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header" id="site-header"></header>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../agentic-development/index.html">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../index.html#about">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../index.html#about">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html" aria-current="page"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
   <main id="main">
-    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Build Guides</a> / Cost and rate limits</nav>
-    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
-      <header class="article-header">
-        <h1 itemprop="headline">Cost and rate limits</h1>
-        <p class="lead" itemprop="description">Control LLM costs in production agents: per-turn token and call caps, model routing, prompt caching, catalog trimming, rate limits per tenant and budget alerts.</p>
-        <p class="meta">2 min read</p>
-      </header>
-      <div data-visual="default"></div>
-      <p>LLM costs scale with usage and with carelessness. A prompt that grew by 2,000 tokens, a planner that loops once more than needed, or one tenant's automated script can each double a monthly bill. Cost controls are guardrails you put in place before you need them.</p>
+<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><a href="index.html">Build Guides</a><span class="sep">/</span><span aria-current="page">Cost and rate limits</span></nav>
+    <h1>Cost and rate limits</h1>
+    <p class="lead">Control LLM costs in production agents: per-turn token and call caps, model routing, prompt caching, catalog trimming, rate limits per tenant and budget alerts.</p>
+    <p class="meta"><span>2 min read</span></p>
+  </div>
+</header>
+<article class="prose">
+<p>LLM costs scale with usage and with carelessness. A prompt that grew by 2,000 tokens, a planner that loops once more than needed, or one tenant's automated script can each double a monthly bill. Cost controls are guardrails you put in place before you need them.</p>
 
 <h2>Know where tokens go</h2>
 <p>Tag every LLM call with a <code>purpose</code> (route, plan, resolve, compose, judge) and record input and output tokens. A weekly breakdown by purpose usually shows that planning dominates, and within planning, the capability cards and transcript window are the bulk of input tokens. Optimize what the numbers point at.</p>
@@ -71,16 +92,27 @@
   <li>Any single tenant above a set share of total usage.</li>
 </ul>
 <p>Review the cost dashboard after every release that touches prompts or the catalog. Cost regressions are much easier to fix the day they ship.</p>
-<nav class="post-nav" aria-label="More in this section"><a href="local-dev.html">← Local dev topology</a><a href="incident-runbook.html">On-call runbook for agentic APIs →</a></nav>
-      
+
 <section class="jargon" aria-labelledby="jargon-heading">
   <h2 id="jargon-heading">Terms on this page</h2>
   <dl><dt>Token cap</dt><dd>Maximum model tokens consumed per user turn.</dd><dt>Rate limit</dt><dd>Throttle on requests per time window.</dd></dl>
 </section>
-    </article>
+<nav class="post-nav" aria-label="More articles"><a class="prev" href="local-dev.html"><small>Previous</small>Local dev topology</a><a class="next" href="incident-runbook.html"><small>Next</small>On-call runbook for agentic APIs</a></nav>
+</article>
   </main>
-  <footer class="site-footer" id="site-footer"></footer>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Agentic Field Notes</strong>Notes on building AI agents, written by an AI application developer.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../agentic-development/index.html">20-step path</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
   <script src="../assets/js/site.js" defer></script>
-  <script src="../assets/js/visuals.js" defer></script>
 </body>
 </html>

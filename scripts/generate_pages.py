@@ -51,12 +51,20 @@ def _section_id(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
 
 
+def png_size(path: Path) -> tuple[int, int]:
+    import struct
+    with open(path, "rb") as f:
+        head = f.read(24)
+    return struct.unpack(">II", head[16:24])
+
+
 def figure_img(depth: int, filename: str, alt: str, caption: str) -> str:
     prefix = "../" * depth
     path = f"{prefix}assets/images/langfuse/{html.escape(filename)}"
+    w, h = png_size(ROOT / "assets" / "images" / "langfuse" / filename)
     return f"""<figure class="screenshot-figure">
   <a href="{path}" class="screenshot-link" target="_blank" rel="noopener noreferrer">
-    <img src="{path}" alt="{html.escape(alt)}" loading="lazy" decoding="async" width="1280" height="720">
+    <img src="{path}" alt="{html.escape(alt)}" loading="lazy" decoding="async" width="{w}" height="{h}">
   </a>
   <figcaption>{html.escape(caption)}</figcaption>
 </figure>"""
@@ -491,148 +499,309 @@ OTHER_SECTIONS: dict[str, dict] = {
 }
 
 
-def page_shell(
-    *,
-    title: str,
-    description: str,
-    canonical_path: str,
-    depth: int,
-    breadcrumb: str,
-    body: str,
-    jargon: dict[str, str],
-    extra_head: str = "",
-    visual: str | None = "graph",
-    show_meta: bool = False,
-) -> str:
-    prefix = "../" * depth
-    visual_html = (
-        f'<div data-visual="{html.escape(visual)}"></div>' if visual else ""
-    )
-    jargon_html = ""
-    if jargon:
-        items = "".join(
-            f"<dt>{html.escape(k)}</dt><dd>{html.escape(v)}</dd>"
-            for k, v in jargon.items()
+# ---------------------------------------------------------------------------
+# Site identity
+# ---------------------------------------------------------------------------
+
+SITE_NAME = "Agentic Field Notes"
+# Shown in the byline, footer and About section. Leave empty for a generic byline.
+AUTHOR_NAME = os.environ.get("AUTHOR_NAME", "")
+AUTHOR_ROLE = "AI application developer"
+GITHUB_URL = "https://github.com/codertcet111"
+REPO_URL = "https://github.com/codertcet111/agentic-ai-learning"
+
+TOPIC_GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
+    ("Build the system", [
+        ("agentic-development", "Agentic Development", "Twenty steps from a blank repo to a production agent backend"),
+        ("graph-orchestration", "Graph & Orchestration", "Routing, checkpoints, multi-agent handoffs and pauses"),
+        ("data-patterns", "Mongo for AI", "Schemas for chat, turns, forms, usage and vectors"),
+        ("build-guides", "Build Guides", "Ship a first feature, add writes, run it locally, control cost"),
+    ]),
+    ("Models and knowledge", [
+        ("llm-engineering", "LLM Engineering", "Gateways, structured outputs, stubs, context windows"),
+        ("prompts-tools", "Prompts & Tools", "Tool descriptions, planner policy, lookups, two languages"),
+        ("rag-knowledge", "RAG & Knowledge", "Chunking, retrieval as a tool, freshness and access control"),
+    ]),
+    ("Quality and safety", [
+        ("evaluation", "Eval & Observability", "Golden cases, judges, trace diffs, monitoring stack"),
+        ("langfuse-lab", "Langfuse Lab", "A screenshot tour of traces, spans, tokens and budgets"),
+        ("testing-ai-dev", "Testing as an AI Dev", "Graph specs, fakes, golden runner, tracing tests"),
+        ("security-ai", "Security for AI", "Token forwarding, layered authorization, safe writes"),
+    ]),
+]
+TOPIC_INFO = {sid: (title, desc) for _, items in TOPIC_GROUPS for sid, title, desc in items}
+
+LOGO_SVG = (
+    '<svg viewBox="0 0 30 22" aria-hidden="true">'
+    '<path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/>'
+    '<circle cx="6" cy="16" r="4" fill="#2b3cff"/>'
+    '<circle cx="15" cy="6" r="4" fill="#12152b"/>'
+    '<circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/>'
+    "</svg>"
+)
+
+CHEVRON = (
+    '<svg class="chev" viewBox="0 0 12 12" aria-hidden="true">'
+    '<path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+)
+
+CURRENT_ATTR = ' aria-current="page"'
+
+
+def esc(text: str) -> str:
+    return html.escape(text, quote=True)
+
+
+def public_url(canonical_path: str) -> str:
+    return SITE_URL + canonical_path.replace("/static-blog", "", 1)
+
+
+def author_label() -> str:
+    return AUTHOR_NAME or f"an {AUTHOR_ROLE}"
+
+
+def header_html(prefix: str, current: str | None) -> str:
+    groups = []
+    for gtitle, items in TOPIC_GROUPS:
+        lis = "".join(
+            f'<li><a href="{prefix}{sid}/index.html"'
+            f'{CURRENT_ATTR if sid == current else ""}>'
+            f'<span class="topic-name">{esc(title)}</span>'
+            f'<span class="topic-desc">{esc(desc)}</span></a></li>'
+            for sid, title, desc in items
         )
-        jargon_html = f"""
-<section class="jargon" aria-labelledby="jargon-heading">
+        groups.append(f'<div class="topic-group"><h2>{esc(gtitle)}</h2><ul>{lis}</ul></div>')
+    start_current = CURRENT_ATTR if current == "agentic-development" else ""
+    groups_html = "".join(groups)
+    return f"""<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="{prefix}index.html">{LOGO_SVG}<span>{SITE_NAME}</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="{prefix}agentic-development/index.html"{start_current}>Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics {CHEVRON}</button>
+      <a class="nav-link" href="{prefix}index.html#about">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="{prefix}agentic-development/index.html">Start the 20-step path</a><a href="{prefix}index.html#about">About</a></div>
+      {groups_html}
+    </div>
+  </div>
+</header>"""
+
+
+def footer_html(prefix: str) -> str:
+    who = f"<strong>{esc(AUTHOR_NAME)}</strong>" if AUTHOR_NAME else "<strong>Agentic Field Notes</strong>"
+    return f"""<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="{prefix}assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div>{who}Notes on building AI agents, written by {esc(author_label())}.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="{prefix}agentic-development/index.html">20-step path</a>
+      <a href="{GITHUB_URL}">GitHub</a>
+      <a href="{prefix}sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>"""
+
+
+def breadcrumb_html(items: list[tuple[str, str | None]]) -> str:
+    parts = []
+    for label, href in items:
+        parts.append(f'<a href="{href}">{esc(label)}</a>' if href else f'<span aria-current="page">{esc(label)}</span>')
+    return '<nav class="breadcrumb" aria-label="Breadcrumb">' + '<span class="sep">/</span>'.join(parts) + "</nav>"
+
+
+def jargon_html(jargon: dict[str, str]) -> str:
+    if not jargon:
+        return ""
+    items = "".join(f"<dt>{esc(k)}</dt><dd>{esc(v)}</dd>" for k, v in jargon.items())
+    return f"""<section class="jargon" aria-labelledby="jargon-heading">
   <h2 id="jargon-heading">Terms on this page</h2>
   <dl>{items}</dl>
 </section>"""
 
+
+def document(*, title: str, description: str, canonical_path: str, depth: int,
+             main: str, current: str | None, schema: dict, og_type: str = "article",
+             full_title: str | None = None) -> str:
+    import json
+    prefix = "../" * depth
+    url = public_url(canonical_path)
+    og_image = f"{SITE_URL}/assets/images/og-default.png"
+    page_title = full_title or f"{title} | {SITE_NAME}"
+    schema_json = json.dumps(schema, ensure_ascii=False)
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(title)} | Agentic Field Notes</title>
-  <meta name="description" content="{html.escape(description)}">
-  <meta name="author" content="AI Application Developer">
+  <title>{esc(page_title)}</title>
+  <meta name="description" content="{esc(description)}">
+  <meta name="author" content="{esc(AUTHOR_NAME or AUTHOR_ROLE)}">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="{html.escape(SITE_URL + canonical_path.replace('/static-blog', '', 1))}">
-  <meta property="og:url" content="{html.escape(SITE_URL + canonical_path.replace('/static-blog', '', 1))}">
-  <meta property="og:title" content="{html.escape(title)}">
-  <meta property="og:description" content="{html.escape(description)}">
-  <meta property="og:type" content="article">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="canonical" href="{esc(url)}">
+  <link rel="icon" href="{prefix}assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="{SITE_NAME}">
+  <meta property="og:title" content="{esc(title)}">
+  <meta property="og:description" content="{esc(description)}">
+  <meta property="og:type" content="{og_type}">
+  <meta property="og:url" content="{esc(url)}">
+  <meta property="og:image" content="{og_image}">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="{prefix}assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{prefix}assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{prefix}assets/css/site.css">
-  <script type="application/ld+json">
-  {{"@context":"https://schema.org","@type":"TechArticle","headline":"{html.escape(title)}","description":"{html.escape(description)}","author":{{"@type":"Person","name":"AI Application Developer"}}}}
-  </script>
-  {extra_head}
+  <script type="application/ld+json">{schema_json}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header" id="site-header"></header>
+  {header_html(prefix, current)}
   <main id="main">
-    <nav class="breadcrumb" aria-label="Breadcrumb">{breadcrumb}</nav>
-    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
-      <header class="article-header">
-        <h1 itemprop="headline">{html.escape(title)}</h1>
-        <p class="lead" itemprop="description">{html.escape(description)}</p>
-        {f'<p class="meta">{reading_time(body)} min read</p>' if show_meta else ''}
-      </header>
-      {visual_html}
-      {body}
-      {jargon_html}
-    </article>
+{main}
   </main>
-  <footer class="site-footer" id="site-footer"></footer>
+  {footer_html(prefix)}
   <script src="{prefix}assets/js/site.js" defer></script>
-  <script src="{prefix}assets/js/visuals.js" defer></script>
 </body>
 </html>
 """
 
 
+def author_schema() -> dict:
+    return {"@type": "Person", "name": AUTHOR_NAME or AUTHOR_ROLE, "url": GITHUB_URL}
+
+
+def article_page(*, section_id: str, title: str, description: str, canonical_path: str,
+                 depth: int, crumbs: list[tuple[str, str | None]], body: str,
+                 jargon: dict[str, str], nav_html: str, heading: str | None = None) -> str:
+    prefix = "../" * depth
+    minutes = reading_time(body)
+    byline = (f'<span class="byline"><img src="{prefix}assets/images/author/avatar.jpg" alt="" width="28" height="28">'
+              f'{esc(AUTHOR_NAME)}</span>') if AUTHOR_NAME else ""
+    main = f"""<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    {breadcrumb_html(crumbs)}
+    <h1>{esc(heading or title)}</h1>
+    <p class="lead">{esc(description)}</p>
+    <p class="meta">{byline}<span>{minutes} min read</span></p>
+  </div>
+</header>
+<article class="prose">
+{body}
+{jargon_html(jargon)}
+{nav_html}
+</article>"""
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": title,
+        "description": description,
+        "url": public_url(canonical_path),
+        "image": f"{SITE_URL}/assets/images/og-default.png",
+        "author": author_schema(),
+        "isPartOf": {"@type": "WebSite", "name": SITE_NAME, "url": SITE_URL + "/"},
+    }
+    return document(title=title, description=description, canonical_path=canonical_path,
+                    depth=depth, main=main, current=section_id, schema=schema)
+
+
+def index_page(*, section_id: str, title: str, intro: str, canonical_path: str,
+               list_html: str, extra: str = "") -> str:
+    main = f"""<header class="page-head grid-paper wide">
+  <div class="page-head-inner">
+    {breadcrumb_html([("Home", "../index.html"), (title, None)])}
+    <h1>{esc(title)}</h1>
+    <p class="lead">{esc(intro)}</p>
+  </div>
+</header>
+<div class="prose wide">
+{extra}
+{list_html}
+</div>"""
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": title,
+        "description": intro,
+        "url": public_url(canonical_path),
+    }
+    return document(title=title, description=intro, canonical_path=canonical_path,
+                    depth=1, main=main, current=section_id, schema=schema, og_type="website")
+
+
+def nav_pair(prev: tuple[str, str] | None, nxt: tuple[str, str] | None) -> str:
+    if not prev and not nxt:
+        return ""
+    parts = []
+    if prev:
+        parts.append(f'<a class="prev" href="{prev[0]}"><small>Previous</small>{esc(prev[1])}</a>')
+    if nxt:
+        parts.append(f'<a class="next" href="{nxt[0]}"><small>Next</small>{esc(nxt[1])}</a>')
+    return f'<nav class="post-nav" aria-label="More articles">{"".join(parts)}</nav>'
+
+
+def step_label(title: str) -> str:
+    """'Step 3 — Keep auth…' -> 'Keep auth…' for headings and compact lists."""
+    return re.sub(r"^Step \d+\s*[—-]\s*", "", title)
+
+
 def write_agentic_pages() -> list[str]:
     paths: list[str] = []
     section_dir = ROOT / "agentic-development"
-    section_dir.mkdir(parents=True, exist_ok=True)
+    (section_dir / "steps").mkdir(parents=True, exist_ok=True)
 
-    # index
-    steps_html = "".join(
-        f'<li><a href="steps/{s["slug"]}.html"><span class="step-num">{i:02d}</span>'
-        f'<span>{html.escape(s["title"])}</span></a></li>'
-        for i, s in enumerate(AGENTIC_STEPS, 1)
-    )
-    index_body = f"""
-<p>This tab is a twenty-step path from blank repo to production agentic backend. Examples stay generic—a fictional HR, billing, or inventory domain—so you can map the ideas to your stack.</p>
-<p>Steps reflect patterns used in modern orchestration services: Mongo for truth, Redis for cache, LangGraph for flow, LiteLLM for models, golden JSON for evals, and strict auth boundaries.</p>
-<ul class="step-list">{steps_html}</ul>
-"""
-    index_path = section_dir / "index.html"
-    index_path.write_text(
-        page_shell(
-            title="Agentic Development — 20 Steps",
-            description="A twenty-page path to designing and shipping an agentic orchestration backend.",
+    items = []
+    for i, s in enumerate(AGENTIC_STEPS, 1):
+        d, b = load_article("agentic-development", s["slug"])
+        s["_desc"] = d or s["desc"]
+        s["_body"] = b or s["body"]
+        items.append(
+            f'<li><a href="steps/{s["slug"]}.html"><span class="num">{i:02d}</span>'
+            f'<span class="title">{esc(step_label(s["title"]))}</span>'
+            f'<span class="time">{reading_time(s["_body"])} min</span>'
+            f'<span class="desc">{esc(s["_desc"])}</span></a></li>'
+        )
+    intro_extra = ("<p>Read these in order. Each step builds on the one before, from drawing the boundary "
+                   "between your agent and your business APIs to freezing behaviour with golden tests. "
+                   "Examples use a fictional HR assistant so you can map the ideas onto your own domain.</p>")
+    items_html = "".join(items)
+    (section_dir / "index.html").write_text(
+        index_page(
+            section_id="agentic-development",
+            title="Agentic Development",
+            intro="A twenty-step path to designing and shipping an agentic backend that holds up in production.",
             canonical_path="/static-blog/agentic-development/",
-            depth=1,
-            breadcrumb='<a href="../index.html">Home</a> / Agentic Development',
-                body=index_body,
-            jargon={
-                "Agentic backend": "Service that orchestrates LLM turns, tools, and chat state.",
-                "Orchestration": "Coordination of model calls and tools without owning business rules.",
-            },
-            visual=None,
+            list_html=f'<ol class="article-list numbered">{items_html}</ol>',
+            extra=intro_extra,
         ),
         encoding="utf-8",
     )
     paths.append("agentic-development/index.html")
 
-    steps_dir = section_dir / "steps"
-    steps_dir.mkdir(exist_ok=True)
+    n = len(AGENTIC_STEPS)
     for i, step in enumerate(AGENTIC_STEPS, 1):
-        prev_slug = AGENTIC_STEPS[i - 2]["slug"] if i > 1 else None
-        next_slug = AGENTIC_STEPS[i]["slug"] if i < len(AGENTIC_STEPS) else None
-        nav = ""
-        if prev_slug:
-            nav += f'<a href="{prev_slug}.html">← Previous</a> · '
-        if next_slug:
-            nav += f'<a href="{next_slug}.html">Next →</a>'
-        art_desc, art_body = load_article("agentic-development", step["slug"])
+        prev = (f'{AGENTIC_STEPS[i - 2]["slug"]}.html', step_label(AGENTIC_STEPS[i - 2]["title"])) if i > 1 else None
+        nxt = (f'{AGENTIC_STEPS[i]["slug"]}.html', step_label(AGENTIC_STEPS[i]["title"])) if i < n else None
         dev = AGENTIC_DEV_NOTES.get(step["slug"], "")
-        dev_html = (
-            f'<div class="callout dev-pov"><strong>Developer POV:</strong> {html.escape(dev)}</div>'
-            if dev
-            else ""
-        )
-        body = (art_body or step["body"]) + dev_html + (f'<p class="meta">{nav}</p>' if nav else "")
+        dev_html = f'<div class="callout dev-pov"><strong>Try this:</strong> {esc(dev)}</div>' if dev else ""
         fname = f"steps/{step['slug']}.html"
         (section_dir / fname).write_text(
-            page_shell(
-                title=step["title"],
-                description=art_desc or step["desc"],
+            article_page(
+                section_id="agentic-development",
+                title=f"Step {i}: {step_label(step['title'])}",
+                heading=step_label(step["title"]),
+                description=step["_desc"],
                 canonical_path=f"/static-blog/agentic-development/{fname}",
                 depth=2,
-                breadcrumb=(
-                    '<a href="../../index.html">Home</a> / '
-                    '<a href="../index.html">Agentic Development</a> / '
-                    f"Step {i}"
-                ),
-                body=body,
+                crumbs=[("Home", "../../index.html"), ("Agentic Development", "../index.html"), (f"Step {i} of {n}", None)],
+                body=step["_body"] + dev_html,
                 jargon=step["jargon"],
-                visual="graph",
-                show_meta=True,
+                nav_html=nav_pair(prev, nxt),
             ),
             encoding="utf-8",
         )
@@ -645,62 +814,44 @@ def write_other_sections() -> list[str]:
     for section_id, meta in all_other_sections().items():
         section_dir = ROOT / section_id
         section_dir.mkdir(parents=True, exist_ok=True)
-        pages = meta["pages"]
-        descs = {}
-        bodies = {}
-        for slug, title, _, body, _ in pages:
+        loaded = []
+        for slug, title, _visual, body, jargon in meta["pages"]:
             d, b = load_article(section_id, slug)
-            descs[slug] = d or title
-            bodies[slug] = b or body
-        links = "".join(
-            f'<li><a href="{slug}.html"><span class="step-num">{i:02d}</span>'
-            f'<span><strong>{html.escape(title)}</strong><br><small>{html.escape(descs[slug])}</small></span></a></li>'
-            for i, (slug, title, _, _, _) in enumerate(pages, 1)
+            loaded.append((slug, title, d or title, b or body, jargon))
+
+        items = "".join(
+            f'<li><a href="{slug}.html"><span class="title">{esc(title)}</span>'
+            f'<span class="time">{reading_time(body)} min</span>'
+            f'<span class="desc">{esc(desc)}</span></a></li>'
+            for slug, title, desc, body, _ in loaded
         )
-        index_body = f'<p>{meta["index_intro"]}</p><ul class="step-list">{links}</ul>'
-        index_path = section_dir / "index.html"
-        index_path.write_text(
-            page_shell(
+        (section_dir / "index.html").write_text(
+            index_page(
+                section_id=section_id,
                 title=meta["title"],
-                description=meta["index_intro"],
+                intro=meta["index_intro"],
                 canonical_path=f"/static-blog/{section_id}/",
-                depth=1,
-                breadcrumb=f'<a href="../index.html">Home</a> / {html.escape(meta["title"])}',
-                body=index_body,
-                jargon={},
-                visual=None,
+                list_html=f'<ul class="article-list">{items}</ul>',
             ),
             encoding="utf-8",
         )
         paths.append(f"{section_id}/index.html")
 
-        for i, (slug, title, visual, _, jargon) in enumerate(pages):
+        for i, (slug, title, desc, body, jargon) in enumerate(loaded):
+            prev = (f"{loaded[i - 1][0]}.html", loaded[i - 1][1]) if i > 0 else None
+            nxt = (f"{loaded[i + 1][0]}.html", loaded[i + 1][1]) if i < len(loaded) - 1 else None
             fname = f"{slug}.html"
-            body_html = expand_body(bodies[slug], 1)
-            nav = []
-            if i > 0:
-                p_slug, p_title = pages[i - 1][0], pages[i - 1][1]
-                nav.append(f'<a href="{p_slug}.html">← {html.escape(p_title)}</a>')
-            if i < len(pages) - 1:
-                n_slug, n_title = pages[i + 1][0], pages[i + 1][1]
-                nav.append(f'<a href="{n_slug}.html">{html.escape(n_title)} →</a>')
-            if nav:
-                body_html += f'<nav class="post-nav" aria-label="More in this section">{"".join(nav)}</nav>'
             (section_dir / fname).write_text(
-                page_shell(
+                article_page(
+                    section_id=section_id,
                     title=title,
-                    description=descs[slug],
+                    description=desc,
                     canonical_path=f"/static-blog/{section_id}/{fname}",
                     depth=1,
-                    breadcrumb=(
-                        f'<a href="../index.html">Home</a> / '
-                        f'<a href="index.html">{html.escape(meta["title"])}</a> / '
-                        f"{html.escape(title)}"
-                    ),
-                    body=body_html,
+                    crumbs=[("Home", "../index.html"), (meta["title"], "index.html"), (title, None)],
+                    body=expand_body(body, 1),
                     jargon=jargon,
-                    visual=visual,
-                    show_meta=True,
+                    nav_html=nav_pair(prev, nxt),
                 ),
                 encoding="utf-8",
             )
@@ -708,121 +859,149 @@ def write_other_sections() -> list[str]:
     return paths
 
 
-def write_home() -> None:
-    cards = """
-<div class="grid">
-  <a class="card" href="agentic-development/index.html">
-    <div class="card-visual" data-visual="graph"></div>
-    <h2>Agentic Development</h2>
-    <p>Twenty steps from boundary drawing to golden evals.</p>
-  </a>
-  <a class="card" href="graph-orchestration/index.html">
-    <div class="card-visual" data-visual="graph"></div>
-    <h2>Graph &amp; Orchestration</h2>
-    <p>Routing, checkpoints, multi-agent handoffs.</p>
-  </a>
-  <a class="card" href="data-patterns/index.html">
-    <div class="card-visual" data-visual="data"></div>
-    <h2>Mongo for AI</h2>
-    <p>Schemas for chat, forms, usage, and vectors.</p>
-  </a>
-  <a class="card" href="rag-knowledge/index.html">
-    <div class="card-visual" data-visual="rag"></div>
-    <h2>RAG &amp; Knowledge</h2>
-    <p>Chunking, tool-based retrieval, ACL.</p>
-  </a>
-  <a class="card" href="evaluation/index.html">
-    <div class="card-visual" data-visual="eval"></div>
-    <h2>Eval &amp; Observability</h2>
-    <p>Golden cases, traces, judge models.</p>
-  </a>
-  <a class="card" href="build-guides/index.html">
-    <div class="card-visual" data-visual="default"></div>
-    <h2>Build Guides</h2>
-    <p>Feature slices, writes, local dev, cost.</p>
-  </a>
-  <a class="card" href="langfuse-lab/index.html">
-    <div class="card-visual" data-visual="eval"></div>
-    <h2>Langfuse Lab</h2>
-    <p>Traces, per-node cost, tokens, failures, alerts.</p>
-  </a>
-  <a class="card" href="llm-engineering/index.html">
-    <div class="card-visual" data-visual="default"></div>
-    <h2>LLM Engineering</h2>
-    <p>LiteLLM, stubs, windows, model routing.</p>
-  </a>
-  <a class="card" href="prompts-tools/index.html">
-    <div class="card-visual" data-visual="graph"></div>
-    <h2>Prompts &amp; Tools</h2>
-    <p>Capability cards, planner policy, compose.</p>
-  </a>
-  <a class="card" href="security-ai/index.html">
-    <div class="card-visual" data-visual="eval"></div>
-    <h2>Security for AI</h2>
-    <p>Auth forwarding, writes, eval signing.</p>
-  </a>
-  <a class="card" href="testing-ai-dev/index.html">
-    <div class="card-visual" data-visual="data"></div>
-    <h2>Testing as an AI Dev</h2>
-    <p>Graph specs, fakes, golden runner, tracing tests.</p>
-  </a>
-</div>
-"""
-    body = f"""
-<section class="hero">
-  <canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas>
-  <div class="hero-content">
-    <p class="hero-tagline">Static field notes</p>
-    <h1>Building agentic systems that survive production</h1>
-    <p class="lead">Practical essays on orchestration graphs, Mongo data planes, RAG, and evaluation—written by an AI application developer for engineers shipping copilots and tool-using agents.</p>
+def write_home(counts: dict[str, int]) -> None:
+    total = sum(counts.values())
+    path_items = "".join(
+        f'<li><a href="agentic-development/steps/{s["slug"]}.html">'
+        f'<span class="path-num">{i:02d}</span><span class="path-title">{esc(step_label(s["title"]))}</span></a></li>'
+        for i, s in enumerate(AGENTIC_STEPS, 1)
+    )
+    columns = []
+    for gtitle, items in TOPIC_GROUPS:
+        lis = "".join(
+            f'<li><a href="{sid}/index.html"><span class="topic-name">{esc(title)}</span>'
+            f'<span class="topic-desc">{esc(desc)}</span>'
+            f'<span class="topic-count">{counts.get(sid, 0)} articles</span></a></li>'
+            for sid, title, desc in items
+        )
+        columns.append(f'<div><h3 class="group-title">{esc(gtitle)}</h3><ul>{lis}</ul></div>')
+    columns_html = "".join(columns)
+
+    about_name = f"I'm {esc(AUTHOR_NAME)}, an {AUTHOR_ROLE}." if AUTHOR_NAME else f"These notes are written by an {AUTHOR_ROLE}."
+    portrait_alt = f"Portrait of {esc(AUTHOR_NAME)}" if AUTHOR_NAME else "Portrait of the author"
+    main = f"""<section class="hero grid-paper" aria-labelledby="hero-title">
+  <div class="hero-inner">
+    <div>
+      <h1 id="hero-title">Building agentic systems that survive production</h1>
+      <p class="hero-lede">Practical notes on orchestration graphs, MongoDB data planes, retrieval, evaluation and tracing, for engineers shipping copilots and tool-using agents.</p>
+      <div class="hero-actions">
+        <a class="button primary" href="agentic-development/index.html">Start the 20-step path</a>
+        <a class="button secondary" href="#topics">Browse all topics</a>
+      </div>
+      <ul class="hero-facts">
+        <li><strong>{total}</strong> articles</li>
+        <li><strong>{len(TOPIC_INFO)}</strong> topics</li>
+        <li>Free and open on <a href="{REPO_URL}">GitHub</a></li>
+      </ul>
+    </div>
+    <figure class="portrait">
+      <div class="portrait-frame">
+        <img class="photo-duo" src="assets/images/author/portrait-duotone.jpg" alt="{portrait_alt}" width="720" height="900" fetchpriority="high">
+        <img class="photo-color" src="assets/images/author/portrait.jpg" alt="" width="720" height="900" loading="lazy">
+      </div>
+      <figcaption class="trace-card" aria-label="An example agent trace">
+        <p>chat-turn &middot; 2.8 s</p>
+        <ol>
+          <li><span>route</span><span class="bar"><i style="--start:0%;--len:12%;--delay:.2s"></i></span><span class="ms">0.3s</span></li>
+          <li><span>plan</span><span class="bar"><i style="--start:12%;--len:30%;--delay:.35s"></i></span><span class="ms">0.9s</span></li>
+          <li class="child tool"><span>invoke</span><span class="bar"><i style="--start:42%;--len:9%;--delay:.5s"></i></span><span class="ms">0.2s</span></li>
+          <li><span>plan</span><span class="bar"><i style="--start:51%;--len:21%;--delay:.65s"></i></span><span class="ms">0.6s</span></li>
+          <li><span>compose</span><span class="bar"><i style="--start:72%;--len:28%;--delay:.8s"></i></span><span class="ms">0.8s</span></li>
+        </ol>
+      </figcaption>
+    </figure>
   </div>
 </section>
-<p>This site is plain HTML, CSS, and JavaScript: mobile-friendly, crawler-readable, and free of stock image CDNs. Diagrams are generated in the browser with canvas and SVG.</p>
-<h2>Explore by topic</h2>
-{cards}
-<h2>What you will find here</h2>
-<ul>
-  <li><strong>Agentic Development</strong> (tab 2) — twenty linked lessons mirroring a real orchestration codebase without vendor-specific examples.</li>
-  <li>Deep dives on LangGraph-style pipelines, turn admission, catalog merging, and bilingual compose.</li>
-  <li>Mongo schema recipes for chat, pending forms, failures, and retrieval metadata.</li>
-  <li>Evaluation patterns: golden JSON, stub LLMs, trace diffs, and observability glue.</li>
-  <li><strong>Langfuse Lab</strong> — screenshot-guided tours of traces, span trees, token/cost panels, turn budgets, and masking alerts.</li>
-  <li>LLM engineering, prompts &amp; tools, security, and testing tabs written from a day-to-day AI developer perspective.</li>
-</ul>
-<p>Open-source orchestration repos and internal architecture wikis informed the outline; content is generalized so you can adapt it to any domain API.</p>
-"""
+
+<section class="home-section" aria-labelledby="path-title">
+  <div class="section-head">
+    <div>
+      <h2 id="path-title">The 20-step path</h2>
+      <p>One lesson at a time, from the first architecture decision to a tested, traceable agent.</p>
+    </div>
+    <a href="agentic-development/index.html">See every step with summaries</a>
+  </div>
+  <ol class="path-list">{path_items}</ol>
+</section>
+
+<section class="home-section" id="topics" aria-labelledby="topics-title">
+  <div class="section-head">
+    <div>
+      <h2 id="topics-title">Topics</h2>
+      <p>Deeper dives, grouped by what you are working on.</p>
+    </div>
+  </div>
+  <div class="topic-columns">{columns_html}</div>
+</section>
+
+<section class="home-section" id="about" aria-labelledby="about-title">
+  <div class="about">
+    <img src="assets/images/author/avatar.jpg" alt="" width="96" height="96" loading="lazy">
+    <div>
+      <h2 id="about-title">About these notes</h2>
+      <p>{about_name} I build assistants that plan, call real business APIs and keep conversations consistent under load. This site collects what worked, what broke, and the patterns I would use again.</p>
+      <p>Examples stay generic so you can map them to your own stack. The site is plain HTML and CSS, with no tracking and no ads. The source is on <a href="{REPO_URL}">GitHub</a>.</p>
+    </div>
+  </div>
+</section>"""
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": SITE_NAME,
+        "url": SITE_URL + "/",
+        "description": "Practical notes on building agentic AI systems: orchestration graphs, MongoDB patterns, RAG, evaluation and tracing.",
+        "author": author_schema(),
+    }
     (ROOT / "index.html").write_text(
-        page_shell(
-            title="Agentic Field Notes",
-            description="SEO-friendly static blog on agentic AI development, graphs, Mongo, RAG, and evals.",
+        document(
+            title=SITE_NAME,
+            full_title=f"{SITE_NAME}: building agentic AI systems that survive production",
+            description="Practical notes on building agentic AI systems: orchestration graphs, MongoDB patterns, RAG, evaluation and tracing.",
             canonical_path="/static-blog/",
             depth=0,
-            breadcrumb="Home",
-            body=body,
-            jargon={
-                "Agentic system": "Software where an LLM plans actions against tools with persisted state.",
-                "Static site": "Pre-built HTML pages served without a server-side renderer.",
-                "SEO": "Search engine optimization via semantic markup, meta tags, and sitemaps.",
-            },
-            extra_head='<meta property="og:type" content="website">',
-            visual=None,
-        ).replace(
-            '<script src="assets/js/visuals.js" defer></script>',
-            '<script src="assets/js/hero-canvas.js" defer></script>\n  <script src="assets/js/visuals.js" defer></script>',
+            main=main,
+            current=None,
+            schema=schema,
+            og_type="website",
         ),
         encoding="utf-8",
     )
 
 
+def write_404() -> None:
+    # GitHub Pages serves 404.html for a missing path at any depth, so links here are absolute.
+    base = SITE_URL
+    page = document(
+        title="Page not found",
+        description="This page does not exist.",
+        canonical_path="/static-blog/404.html",
+        depth=0,
+        main=f"""<div class="not-found">
+  <h1>That page isn't here</h1>
+  <p>The link may be old or mistyped. Try the <a href="{base}/">home page</a> or start with the <a href="{base}/agentic-development/index.html">20-step path</a>.</p>
+</div>""",
+        current=None,
+        schema={"@context": "https://schema.org", "@type": "WebPage", "name": "Page not found"},
+        og_type="website",
+    )
+    page = page.replace('href="assets/', f'href="{base}/assets/').replace('src="assets/', f'src="{base}/assets/')
+    page = page.replace('href="index.html', f'href="{base}/index.html').replace('href="agentic-development/', f'href="{base}/agentic-development/')
+    page = re.sub(r'href="(graph-orchestration|data-patterns|build-guides|llm-engineering|prompts-tools|rag-knowledge|evaluation|langfuse-lab|testing-ai-dev|security-ai)/', rf'href="{base}/\1/', page)
+    page = page.replace('href="sitemap.xml"', f'href="{base}/sitemap.xml"')
+    page = page.replace('<meta name="robots" content="index, follow">', '<meta name="robots" content="noindex">')
+    (ROOT / "404.html").write_text(page, encoding="utf-8")
+
+
 def write_sitemap(paths: list[str]) -> None:
+    from datetime import date
+    today = date.today().isoformat()
     urls = "\n".join(
-        f"  <url><loc>{SITE_URL}/{p.removesuffix('index.html')}</loc></url>"
-        for p in paths if p != "index.html"
+        f"  <url><loc>{SITE_URL}/{p.removesuffix('index.html')}</loc><lastmod>{today}</lastmod></url>"
+        for p in paths
     )
     (ROOT / "sitemap.xml").write_text(
-        f'<?xml version="1.0" encoding="UTF-8"?>\n'
-        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        f"  <url><loc>{SITE_URL}/</loc></url>\n"
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         f"{urls}\n</urlset>\n",
         encoding="utf-8",
     )
@@ -838,12 +1017,19 @@ def write_robots() -> None:
 def main() -> None:
     paths: list[str] = []
     paths.extend(write_agentic_pages())
-    paths.extend(write_other_sections())
-    write_home()
+    other = write_other_sections()
+    paths.extend(other)
+    counts = {"agentic-development": len(AGENTIC_STEPS)}
+    for p in other:
+        sid, name = p.split("/", 1)
+        if name != "index.html":
+            counts[sid] = counts.get(sid, 0) + 1
+    write_home(counts)
+    write_404()
     write_sitemap(["index.html"] + paths)
     write_robots()
     (ROOT / ".nojekyll").write_text("", encoding="utf-8")
-    print(f"Generated {len(paths) + 1} pages under {ROOT}")
+    print(f"Generated {len(paths) + 2} pages under {ROOT}")
 
 
 if __name__ == "__main__":

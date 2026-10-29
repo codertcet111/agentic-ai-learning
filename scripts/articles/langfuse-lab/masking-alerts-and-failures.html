@@ -32,5 +32,9 @@
 </table>
 <p>With this as metadata you can filter traces by reason and chart each one separately. A rise in <code>run_timeout</code> needs a different response from a rise in <code>graph_error</code>.</p>
 
+<h2>Alerting on failed turns</h2>
+<p>Langfuse can notify you when traces match a condition, such as turns that end with a failure reason. Point the alert at a team channel for the development and staging projects, so regressions surface before testers or users report them.</p>
+{{IMG_ALERTS}}
+
 <h2>Linking to support records</h2>
 <p>The root trace's metadata also carries the id of the matching <a href="../data-patterns/failure-records.html">failure record</a> in MongoDB. Support works from the sanitized failure record; engineers follow the link into the trace when they need detail.</p>

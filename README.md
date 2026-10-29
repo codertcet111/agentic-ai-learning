@@ -1,34 +1,32 @@
 # Agentic Field Notes (static blog)
 
-A self-contained, **HTML + CSS + JS** blog about agentic AI development. No build step is required to read it; optional generator refreshes article HTML from `scripts/generate_pages.py`.
+A self-contained **HTML + CSS** blog about building agentic AI systems, published at https://codertcet111.github.io/agentic-ai-learning/. No build step is needed to serve it; `scripts/generate_pages.py` rebuilds the pages after you edit content.
 
 ## Structure
 
 ```text
-static-blog/
-├── index.html                 # Home (animated hero)
-├── robots.txt / sitemap.xml   # SEO / crawlers
+├── index.html                 # Home page
+├── 404.html                   # Shown by GitHub Pages for missing pages
+├── robots.txt / sitemap.xml   # For search engines
 ├── llms.txt                   # Hints for LLM crawlers
-├── assets/css/site.css
-├── assets/js/site.js          # Nav, footer, mobile menu
-├── assets/js/hero-canvas.js   # Home animation
-├── assets/js/visuals.js       # SVG header art (no image CDN)
-├── agentic-development/       # Tab 2 — 20 step pages under steps/
-├── graph-orchestration/
-├── data-patterns/
-├── rag-knowledge/
-├── evaluation/
-├── build-guides/
-├── langfuse-lab/              # Langfuse screenshots + dev walkthroughs
-├── llm-engineering/
-├── prompts-tools/
-├── security-ai/
-├── testing-ai-dev/
-├── assets/images/langfuse/    # Langfuse screenshots
+├── assets/
+│   ├── css/site.css           # The whole theme
+│   ├── js/site.js             # Opens and closes the Topics menu
+│   ├── fonts/                 # Bricolage Grotesque, Literata, JetBrains Mono (self-hosted)
+│   └── images/
+│       ├── author/            # original.jpg plus the cropped, duotone and avatar versions
+│       ├── langfuse/          # Langfuse screenshots
+│       ├── og-default.png     # Preview image for links shared on social media
+│       └── favicon.svg
+├── agentic-development/       # The 20-step path (steps/ holds each step)
+├── graph-orchestration/  data-patterns/  rag-knowledge/  evaluation/
+├── build-guides/  langfuse-lab/  llm-engineering/  prompts-tools/
+├── security-ai/  testing-ai-dev/
 └── scripts/
-    ├── generate_pages.py
-    ├── content_extension.py   # Extra sections & Langfuse copy
-    └── articles/              # Full article bodies, one file per post
+    ├── generate_pages.py      # Builds every HTML page, the sitemap and robots.txt
+    ├── content_extension.py   # Extra sections, glossary terms, screenshot captions
+    ├── make_author_images.py  # Rebuilds the author photos and the social preview image
+    └── articles/              # Article bodies, one file per post
 ```
 
 ## Local preview
@@ -60,21 +58,18 @@ Open `http://localhost:8080/`. On Windows you can use `py -m http.server 8080`.
 
 The empty `.nojekyll` file tells GitHub to serve the files as they are.
 
-### Set your real URL (for SEO)
+### Search engines (SEO)
 
-Canonical links, `sitemap.xml` and `robots.txt` contain the site's full URL. Regenerate them once you know it:
+The site's address is already built in. Every page has a canonical link, a description, Open Graph tags and a preview image, and `sitemap.xml` and `robots.txt` point to `https://codertcet111.github.io/agentic-ai-learning/`. If the address ever changes, edit `SITE_URL` near the top of `scripts/generate_pages.py`, rebuild and push.
 
-```bash
-SITE_URL=https://codertcet111.github.io/agentic-ai-learning python3 scripts/generate_pages.py
-```
+To get the site into Google faster:
 
-On Windows PowerShell:
+1. Open [Google Search Console](https://search.google.com/search-console) and add a **URL prefix** property for `https://codertcet111.github.io/agentic-ai-learning/`.
+2. Choose the **HTML file** verification method. Download the file Google gives you (named like `google1234abcd.html`), put it in the top folder of this repository next to `index.html`, push, then press **Verify**.
+3. In Search Console open **Sitemaps** and submit `sitemap.xml`.
+4. Optionally do the same in [Bing Webmaster Tools](https://www.bing.com/webmasters), which can import the site straight from Search Console.
 
-```powershell
-$env:SITE_URL="https://codertcet111.github.io/agentic-ai-learning"; py scripts/generate_pages.py
-```
-
-Then commit and push again.
+New sites usually take a few days to a few weeks to appear in results.
 
 ## Writing and editing articles
 
@@ -91,7 +86,7 @@ The first line is a comment with the page's meta description:
 <p>Article body…</p>
 ```
 
-Titles, section membership and the "Terms on this page" glossary are defined in `scripts/generate_pages.py` and `scripts/content_extension.py`. After editing, rebuild all pages:
+Titles, section membership and the "Terms on this page" glossary are defined in `scripts/generate_pages.py` and `scripts/content_extension.py`. Your name for the byline, footer and About section is `AUTHOR_NAME` in the site identity block of `scripts/generate_pages.py`. After editing, rebuild all pages:
 
 ```bash
 python3 scripts/generate_pages.py
@@ -99,4 +94,6 @@ python3 scripts/generate_pages.py
 
 To add a new article, add an entry to the relevant section's `pages` list in one of those two Python files and create the matching file under `scripts/articles/`.
 
-Langfuse screenshots are referenced with the placeholders `{{IMG_TRACES_LIST}}`, `{{IMG_SPAN_TREE}}` and `{{IMG_TRACE_DETAIL}}` and live in `assets/images/langfuse/`.
+Langfuse screenshots are referenced with placeholders such as `{{IMG_TRACES_LIST}}` (the full list is `IMAGE_PLACEHOLDERS` in `scripts/content_extension.py`) and live in `assets/images/langfuse/`.
+
+To change the author photo, replace `assets/images/author/original.jpg` and run `python3 scripts/make_author_images.py assets/images/author/original.jpg . path/to/BricolageGrotesque.ttf` (the font is only needed for the social preview image).

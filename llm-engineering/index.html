@@ -5,37 +5,68 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LLM Engineering | Agentic Field Notes</title>
   <meta name="description" content="Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.">
-  <meta name="author" content="AI Application Developer">
+  <meta name="author" content="AI application developer">
   <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
   <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/llm-engineering/">
-  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/llm-engineering/">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
   <meta property="og:title" content="LLM Engineering">
   <meta property="og:description" content="Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.">
-  <meta property="og:type" content="article">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/llm-engineering/">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../assets/css/site.css">
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"TechArticle","headline":"LLM Engineering","description":"Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.","author":{"@type":"Person","name":"AI Application Developer"}}
-  </script>
-  
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "CollectionPage", "name": "LLM Engineering", "description": "Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer's chair.", "url": "https://codertcet111.github.io/agentic-ai-learning/llm-engineering/"}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header" id="site-header"></header>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../agentic-development/index.html">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../index.html#about">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../index.html#about">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../llm-engineering/index.html" aria-current="page"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
   <main id="main">
-    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / LLM Engineering</nav>
-    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
-      <header class="article-header">
-        <h1 itemprop="headline">LLM Engineering</h1>
-        <p class="lead" itemprop="description">Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.</p>
-        
-      </header>
-      
-      <p>Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer's chair.</p><ul class="step-list"><li><a href="litellm-gateway.html"><span class="step-num">01</span><span><strong>LiteLLM as a single gateway</strong><br><small>Route every model call through one gateway such as LiteLLM: model aliases in config, central timeouts and retries, fallbacks, token accounting and provider portability.</small></span></a></li><li><a href="structured-outputs.html"><span class="step-num">02</span><span><strong>Structured outputs in production</strong><br><small>Get reliable structured outputs from LLMs in production: Pydantic schemas, provider-native JSON schema modes, semantic validation, a single repair attempt and safe failure.</small></span></a></li><li><a href="llm-stub-ci.html"><span class="step-num">03</span><span><strong>LLM_STUB and deterministic CI</strong><br><small>Use a stub LLM (LLM_STUB) to run agent graph tests and golden cases deterministically in CI without API keys, and keep stub fixtures in sync with schemas.</small></span></a></li><li><a href="token-window-management.html"><span class="step-num">04</span><span><strong>Token window management</strong><br><small>Manage the LLM context window in chat agents: token budgets per section, recent-turn windows, summaries of older turns, compact tool results and measuring the effect in traces.</small></span></a></li><li><a href="model-routing.html"><span class="step-num">05</span><span><strong>When to use small vs large models</strong><br><small>Decide when to use small versus large language models in an agent: route by purpose, measure with traces, escalate on low confidence and evaluate each tier on its own tasks.</small></span></a></li><li><a href="streaming-dev.html"><span class="step-num">06</span><span><strong>Streaming responses to the client</strong><br><small>Stream LLM responses to chat clients safely: admit the turn first, stream only the compose step, handle client aborts, and reconcile the turn ledger so retries stay correct.</small></span></a></li></ul>
-      
-    </article>
+<header class="page-head grid-paper wide">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><span aria-current="page">LLM Engineering</span></nav>
+    <h1>LLM Engineering</h1>
+    <p class="lead">Day-to-day model integration: LiteLLM, structured outputs, stubs, and routing—from an implementer&#x27;s chair.</p>
+  </div>
+</header>
+<div class="prose wide">
+
+<ul class="article-list"><li><a href="litellm-gateway.html"><span class="title">LiteLLM as a single gateway</span><span class="time">2 min</span><span class="desc">Route every model call through one gateway such as LiteLLM: model aliases in config, central timeouts and retries, fallbacks, token accounting and provider portability.</span></a></li><li><a href="structured-outputs.html"><span class="title">Structured outputs in production</span><span class="time">2 min</span><span class="desc">Get reliable structured outputs from LLMs in production: Pydantic schemas, provider-native JSON schema modes, semantic validation, a single repair attempt and safe failure.</span></a></li><li><a href="llm-stub-ci.html"><span class="title">LLM_STUB and deterministic CI</span><span class="time">2 min</span><span class="desc">Use a stub LLM (LLM_STUB) to run agent graph tests and golden cases deterministically in CI without API keys, and keep stub fixtures in sync with schemas.</span></a></li><li><a href="token-window-management.html"><span class="title">Token window management</span><span class="time">2 min</span><span class="desc">Manage the LLM context window in chat agents: token budgets per section, recent-turn windows, summaries of older turns, compact tool results and measuring the effect in traces.</span></a></li><li><a href="model-routing.html"><span class="title">When to use small vs large models</span><span class="time">2 min</span><span class="desc">Decide when to use small versus large language models in an agent: route by purpose, measure with traces, escalate on low confidence and evaluate each tier on its own tasks.</span></a></li><li><a href="streaming-dev.html"><span class="title">Streaming responses to the client</span><span class="time">2 min</span><span class="desc">Stream LLM responses to chat clients safely: admit the turn first, stream only the compose step, handle client aborts, and reconcile the turn ledger so retries stay correct.</span></a></li></ul>
+</div>
   </main>
-  <footer class="site-footer" id="site-footer"></footer>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Agentic Field Notes</strong>Notes on building AI agents, written by an AI application developer.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../agentic-development/index.html">20-step path</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
   <script src="../assets/js/site.js" defer></script>
-  <script src="../assets/js/visuals.js" defer></script>
 </body>
 </html>

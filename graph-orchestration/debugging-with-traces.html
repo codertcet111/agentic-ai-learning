@@ -5,32 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Debugging graph bugs with traces | Agentic Field Notes</title>
   <meta name="description" content="A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.">
-  <meta name="author" content="AI Application Developer">
+  <meta name="author" content="AI application developer">
   <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
   <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/debugging-with-traces.html">
-  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/debugging-with-traces.html">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
   <meta property="og:title" content="Debugging graph bugs with traces">
   <meta property="og:description" content="A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.">
   <meta property="og:type" content="article">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/debugging-with-traces.html">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../assets/css/site.css">
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"TechArticle","headline":"Debugging graph bugs with traces","description":"A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.","author":{"@type":"Person","name":"AI Application Developer"}}
-  </script>
-  
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Debugging graph bugs with traces", "description": "A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.", "url": "https://codertcet111.github.io/agentic-ai-learning/graph-orchestration/debugging-with-traces.html", "image": "https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png", "author": {"@type": "Person", "name": "AI application developer", "url": "https://github.com/codertcet111"}, "isPartOf": {"@type": "WebSite", "name": "Agentic Field Notes", "url": "https://codertcet111.github.io/agentic-ai-learning/"}}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header" id="site-header"></header>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../agentic-development/index.html">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../index.html#about">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../index.html#about">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html" aria-current="page"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
   <main id="main">
-    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Graph &amp; Orchestration</a> / Debugging graph bugs with traces</nav>
-    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
-      <header class="article-header">
-        <h1 itemprop="headline">Debugging graph bugs with traces</h1>
-        <p class="lead" itemprop="description">A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.</p>
-        <p class="meta">2 min read</p>
-      </header>
-      <div data-visual="graph"></div>
-      <p>Agent bugs rarely produce stack traces. They produce answers that are slightly wrong, a tool that was not called, or a turn that took twelve seconds instead of three. Traces are how you turn "the bot was weird" into a specific node and a specific input.</p>
+<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><a href="index.html">Graph &amp; Orchestration</a><span class="sep">/</span><span aria-current="page">Debugging graph bugs with traces</span></nav>
+    <h1>Debugging graph bugs with traces</h1>
+    <p class="lead">A practical method for debugging LangGraph agent bugs with traces: reproduce, find the request id, walk the span tree and diff node sequences against a known-good run.</p>
+    <p class="meta"><span>2 min read</span></p>
+  </div>
+</header>
+<article class="prose">
+<p>Agent bugs rarely produce stack traces. They produce answers that are slightly wrong, a tool that was not called, or a turn that took twelve seconds instead of three. Traces are how you turn "the bot was weird" into a specific node and a specific input.</p>
 
 <h2>Step 1: get an identifier</h2>
 <p>Ask for, or look up, one of: the request id from the client, the conversation id, or the approximate time and user. Your logs map any of these to a trace id (<a href="../agentic-development/steps/18-observability-tracing.html">step 18</a>). Never start debugging by guessing which turn it was.</p>
@@ -68,16 +89,27 @@ Actual:    load_session → route → plan → compose</code></pre>
   </tbody>
 </table>
 <p>Finish every investigation by adding the case to the golden suite, so the same bug cannot come back unnoticed.</p>
-<nav class="post-nav" aria-label="More in this section"><a href="human-in-the-loop.html">← Human-in-the-loop pauses</a><a href="state-size.html">Keeping GraphState small →</a></nav>
-      
+
 <section class="jargon" aria-labelledby="jargon-heading">
   <h2 id="jargon-heading">Terms on this page</h2>
   <dl><dt>Golden replay</dt><dd>Re-running a fixed scenario to compare traces.</dd></dl>
 </section>
-    </article>
+<nav class="post-nav" aria-label="More articles"><a class="prev" href="human-in-the-loop.html"><small>Previous</small>Human-in-the-loop pauses</a><a class="next" href="state-size.html"><small>Next</small>Keeping GraphState small</a></nav>
+</article>
   </main>
-  <footer class="site-footer" id="site-footer"></footer>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Agentic Field Notes</strong>Notes on building AI agents, written by an AI application developer.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../agentic-development/index.html">20-step path</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
   <script src="../assets/js/site.js" defer></script>
-  <script src="../assets/js/visuals.js" defer></script>
 </body>
 </html>

@@ -5,32 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Masking residuals, failures, and Rollbar alerts | Agentic Field Notes</title>
   <meta name="description" content="Mask personal data before exporting LLM traces, alert on residual PII without logging the values, and record clear failure reasons on root traces for faster debugging.">
-  <meta name="author" content="AI Application Developer">
+  <meta name="author" content="AI application developer">
   <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#ffffff">
   <link rel="canonical" href="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/masking-alerts-and-failures.html">
-  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/masking-alerts-and-failures.html">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <meta property="og:site_name" content="Agentic Field Notes">
   <meta property="og:title" content="Masking residuals, failures, and Rollbar alerts">
   <meta property="og:description" content="Mask personal data before exporting LLM traces, alert on residual PII without logging the values, and record clear failure reasons on root traces for faster debugging.">
   <meta property="og:type" content="article">
+  <meta property="og:url" content="https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/masking-alerts-and-failures.html">
+  <meta property="og:image" content="https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="../assets/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/literata.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../assets/css/site.css">
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"TechArticle","headline":"Masking residuals, failures, and Rollbar alerts","description":"Mask personal data before exporting LLM traces, alert on residual PII without logging the values, and record clear failure reasons on root traces for faster debugging.","author":{"@type":"Person","name":"AI Application Developer"}}
-  </script>
-  
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Masking residuals, failures, and Rollbar alerts", "description": "Mask personal data before exporting LLM traces, alert on residual PII without logging the values, and record clear failure reasons on root traces for faster debugging.", "url": "https://codertcet111.github.io/agentic-ai-learning/langfuse-lab/masking-alerts-and-failures.html", "image": "https://codertcet111.github.io/agentic-ai-learning/assets/images/og-default.png", "author": {"@type": "Person", "name": "AI application developer", "url": "https://github.com/codertcet111"}, "isPartOf": {"@type": "WebSite", "name": "Agentic Field Notes", "url": "https://codertcet111.github.io/agentic-ai-learning/"}}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header" id="site-header"></header>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="../index.html"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M6 16 L15 6 L24 16" fill="none" stroke="#12152b" stroke-width="2.2" stroke-linecap="round"/><circle cx="6" cy="16" r="4" fill="#2b3cff"/><circle cx="15" cy="6" r="4" fill="#12152b"/><circle cx="24" cy="16" r="4" fill="#ffe066" stroke="#12152b" stroke-width="1.6"/></svg><span>Agentic Field Notes</span></a>
+    <nav class="primary-nav" aria-label="Primary">
+      <a class="nav-link" href="../agentic-development/index.html">Start here</a>
+      <button type="button" class="nav-button" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Topics <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 L6 8 L10 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <a class="nav-link" href="../index.html#about">About</a>
+      <button type="button" class="nav-button menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="topics-panel">Menu</button>
+    </nav>
+  </div>
+  <div class="topics-panel" id="topics-panel" hidden>
+    <div class="topics-inner">
+      <div class="topics-mobile-links"><a class="primary" href="../agentic-development/index.html">Start the 20-step path</a><a href="../index.html#about">About</a></div>
+      <div class="topic-group"><h2>Build the system</h2><ul><li><a href="../agentic-development/index.html"><span class="topic-name">Agentic Development</span><span class="topic-desc">Twenty steps from a blank repo to a production agent backend</span></a></li><li><a href="../graph-orchestration/index.html"><span class="topic-name">Graph &amp; Orchestration</span><span class="topic-desc">Routing, checkpoints, multi-agent handoffs and pauses</span></a></li><li><a href="../data-patterns/index.html"><span class="topic-name">Mongo for AI</span><span class="topic-desc">Schemas for chat, turns, forms, usage and vectors</span></a></li><li><a href="../build-guides/index.html"><span class="topic-name">Build Guides</span><span class="topic-desc">Ship a first feature, add writes, run it locally, control cost</span></a></li></ul></div><div class="topic-group"><h2>Models and knowledge</h2><ul><li><a href="../llm-engineering/index.html"><span class="topic-name">LLM Engineering</span><span class="topic-desc">Gateways, structured outputs, stubs, context windows</span></a></li><li><a href="../prompts-tools/index.html"><span class="topic-name">Prompts &amp; Tools</span><span class="topic-desc">Tool descriptions, planner policy, lookups, two languages</span></a></li><li><a href="../rag-knowledge/index.html"><span class="topic-name">RAG &amp; Knowledge</span><span class="topic-desc">Chunking, retrieval as a tool, freshness and access control</span></a></li></ul></div><div class="topic-group"><h2>Quality and safety</h2><ul><li><a href="../evaluation/index.html"><span class="topic-name">Eval &amp; Observability</span><span class="topic-desc">Golden cases, judges, trace diffs, monitoring stack</span></a></li><li><a href="../langfuse-lab/index.html" aria-current="page"><span class="topic-name">Langfuse Lab</span><span class="topic-desc">A screenshot tour of traces, spans, tokens and budgets</span></a></li><li><a href="../testing-ai-dev/index.html"><span class="topic-name">Testing as an AI Dev</span><span class="topic-desc">Graph specs, fakes, golden runner, tracing tests</span></a></li><li><a href="../security-ai/index.html"><span class="topic-name">Security for AI</span><span class="topic-desc">Token forwarding, layered authorization, safe writes</span></a></li></ul></div>
+    </div>
+  </div>
+</header>
   <main id="main">
-    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Langfuse Lab</a> / Masking residuals, failures, and Rollbar alerts</nav>
-    <article class="prose" itemscope itemtype="https://schema.org/TechArticle">
-      <header class="article-header">
-        <h1 itemprop="headline">Masking residuals, failures, and Rollbar alerts</h1>
-        <p class="lead" itemprop="description">Mask personal data before exporting LLM traces, alert on residual PII without logging the values, and record clear failure reasons on root traces for faster debugging.</p>
-        <p class="meta">2 min read</p>
-      </header>
-      <div data-visual="eval"></div>
-      <p>LLM traces are full of user text: questions, names, dates, sometimes things users should not have typed. Before any of it leaves your service, it should pass through a <strong>masking exporter</strong>. When masking misses something, you want to know without copying the sensitive value into yet another system.</p>
+<header class="page-head grid-paper">
+  <div class="page-head-inner">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><a href="index.html">Langfuse Lab</a><span class="sep">/</span><span aria-current="page">Masking residuals, failures, and Rollbar alerts</span></nav>
+    <h1>Masking residuals, failures, and Rollbar alerts</h1>
+    <p class="lead">Mask personal data before exporting LLM traces, alert on residual PII without logging the values, and record clear failure reasons on root traces for faster debugging.</p>
+    <p class="meta"><span>2 min read</span></p>
+  </div>
+</header>
+<article class="prose">
+<p>LLM traces are full of user text: questions, names, dates, sometimes things users should not have typed. Before any of it leaves your service, it should pass through a <strong>masking exporter</strong>. When masking misses something, you want to know without copying the sensitive value into yet another system.</p>
 
 <h2>How the masking exporter works</h2>
 <ol>
@@ -63,18 +84,38 @@
 </table>
 <p>With this as metadata you can filter traces by reason and chart each one separately. A rise in <code>run_timeout</code> needs a different response from a rise in <code>graph_error</code>.</p>
 
+<h2>Alerting on failed turns</h2>
+<p>Langfuse can notify you when traces match a condition, such as turns that end with a failure reason. Point the alert at a team channel for the development and staging projects, so regressions surface before testers or users report them.</p>
+<figure class="screenshot-figure">
+  <a href="../assets/images/langfuse/langfuse-alerts.png" class="screenshot-link" target="_blank" rel="noopener noreferrer">
+    <img src="../assets/images/langfuse/langfuse-alerts.png" alt="Langfuse Alerts page with an alert rule for failed turns" loading="lazy" decoding="async" width="3584" height="1370">
+  </a>
+  <figcaption>The Alerts page in Langfuse with a rule that fires on failed turns.</figcaption>
+</figure>
+
 <h2>Linking to support records</h2>
 <p>The root trace's metadata also carries the id of the matching <a href="../data-patterns/failure-records.html">failure record</a> in MongoDB. Support works from the sanitized failure record; engineers follow the link into the trace when they need detail.</p>
-<nav class="post-nav" aria-label="More in this section"><a href="turn-checks-and-budgets.html">← Turn checks: automated budgets on every trace</a><a href="local-setup-checklist.html">Local Langfuse setup checklist →</a></nav>
-      
+
 <section class="jargon" aria-labelledby="jargon-heading">
   <h2 id="jargon-heading">Terms on this page</h2>
   <dl><dt>Residual alert</dt><dd>Warning that masking missed a class of sensitive data on export.</dd><dt>In-band failure</dt><dd>Expected error returned as a structured result, not an exception.</dd></dl>
 </section>
-    </article>
+<nav class="post-nav" aria-label="More articles"><a class="prev" href="turn-checks-and-budgets.html"><small>Previous</small>Turn checks: automated budgets on every trace</a><a class="next" href="local-setup-checklist.html"><small>Next</small>Local Langfuse setup checklist</a></nav>
+</article>
   </main>
-  <footer class="site-footer" id="site-footer"></footer>
+  <footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-author">
+      <img src="../assets/images/author/avatar.jpg" alt="" width="48" height="48" loading="lazy">
+      <div><strong>Agentic Field Notes</strong>Notes on building AI agents, written by an AI application developer.</div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="../agentic-development/index.html">20-step path</a>
+      <a href="https://github.com/codertcet111">GitHub</a>
+      <a href="../sitemap.xml">Sitemap</a>
+    </nav>
+  </div>
+</footer>
   <script src="../assets/js/site.js" defer></script>
-  <script src="../assets/js/visuals.js" defer></script>
 </body>
 </html>
