@@ -518,6 +518,7 @@ ICON_PATHS = {
     "pen": '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
     "code": '<path d="m8 6-6 6 6 6"/><path d="m16 6 6 6-6 6"/>',
     "trophy": '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>',
+    "chat": '<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8"/><path d="M8 13h5"/>',
     "flask": '<path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/>',
 }
 SOCIAL_LINKS = [
@@ -526,6 +527,7 @@ SOCIAL_LINKS = [
     ("GitHub", "https://github.com/codertcet111", "code", "Code and this site's source"),
     ("HackerEarth", "https://www.hackerearth.com/@shubham42", "trophy", "Coding challenges"),
     ("ResearchGate", "https://www.researchgate.net/profile/Shubham_Mishra39", "flask", "Research and papers"),
+    ("Stack Overflow", "https://stackoverflow.com/users/7516788/shubham-mishra", "chat", "Questions and answers"),
 ]
 
 
@@ -548,14 +550,15 @@ JOURNEY_START = "2017-07"
 JOURNEY = [
     ("Ruby on Rails", "rails", [("2017-07", None)]),
     ("AWS and PostgreSQL", "cloud", [("2017-07", None)]),
-    ("iOS with Swift", "ios", [("2017-07", "2020-06")]),
     ("Python", "python", [("2018-01", "2019-05"), ("2026-03", None)]),
-    ("React", "react", [("2018-01", "2021-12"), ("2026-01", None)]),
-    ("Engineering management", "mgmt", [("2022-03", None)]),
+    ("iOS with Swift", "ios", [("2018-04", "2020-01")]),
+    ("React", "react", [("2019-02", "2023-01"), ("2026-01", None)]),
+    ("Go", "go", [("2021-02", "2023-01")]),
+    ("Engineering leadership", "mgmt", [("2022-03", None)]),
     ("Agentic AI", "agentic", [("2026-03", None)]),
 ]
-JOURNEY_NOTE = ("Also along the way: C++ in college, Apache Kafka, Amazon SQS, "
-                "and Datadog for monitoring (five Datadog certifications in 2025).")
+JOURNEY_NOTE = ("Also along the way: C++ in college, Apache Kafka, RabbitMQ, Amazon SQS, Elasticsearch, "
+                "Google Cloud and Datadog (five Datadog certifications in 2025).")
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
@@ -1134,6 +1137,9 @@ def write_about() -> None:
         for name, url, icon, note in SOCIAL_LINKS
     )
 
+    def bullets(items):
+        return "<ul>" + "".join(f"<li>{x}</li>" for x in items) + "</ul>"
+
     def rows(items):
         return "".join(
             f'<li><span class="when">{esc(when)}</span><span class="what">{esc(what)}</span>'
@@ -1141,39 +1147,64 @@ def write_about() -> None:
             for when, what, text in items
         )
 
-    experience = [
-        ("Now", "Engineering Manager, Jisr", "Leading several domain teams across backend and frontend."),
-        ("Earlier", "Circles.life", "Software engineering; received the Q3 Quantum Leap Award in November 2021."),
-        ("Earlier", "Mirraw.com", "Ruby on Rails and iOS development, API optimisation and web application security."),
+    jobs = [
+        ("Jan 2023 to now", "Jisr (HR tech), remote",
+         "Engineering Manager since Sep 2026, based in Riyadh; Team Lead, Growth and Enterprise, from Jan 2023 to Sep 2026.",
+         [
+             "Lead multiple domain teams of 4 to 5 backend and frontend engineers on Ruby on Rails and React products, from requirements and solution design to release and production monitoring.",
+             "Cut p95 API latency from 1–2 s to under 250 ms across several endpoints with PostgreSQL <code>EXPLAIN ANALYZE</code>, targeted composite indexes, rewritten queries and Redis caching on hot paths.",
+             'Built an automated incident-response pipeline: a Cursor AI agent, Python and the Rollbar API fetch live production errors, analyse root causes and open fix branches, with GitHub, Jira and Confluence wired in to cut debugging time and MTTR. <a href="https://algorithm-analysis-shubham-mishra.blogspot.com/2026/03/ai-automation-how-i-built-end-to-end-ai.html" target="_blank" rel="noopener">Read how it works</a>.',
+             'Built a production Text-to-SQL engine for the ATS that embeds schema metadata in a vector store and retrieves only the relevant tables at query time, shrinking prompts and improving SQL accuracy. <a href="https://algorithm-analysis-shubham-mishra.blogspot.com/2026/05/body-font-family-arial-sans-serif-line.html" target="_blank" rel="noopener">Read the write-up</a>.',
+             "Hands-on in the agentic AI team since March 2026: LLM agents on internal business APIs with LangGraph, RAG, golden-case evaluation and Langfuse tracing.",
+             "Architecture on AWS and Google Cloud with Amazon SQS, Kafka, PostgreSQL (composite indexes, partitioning) and MongoDB; monitoring with Datadog, Rollbar and PagerDuty.",
+             "Integrations with Affinda for AI CV parsing and matching, and Google, Zoom and Azure for candidate email and interview scheduling; a Kubernetes and CI/CD cost-reduction POC with a centralised Swagger service.",
+         ]),
+        ("Feb 2021 to Jan 2023", "Josh Software, for Circles.life (Singapore)",
+         "Senior Software Engineer from Mar 2022; Software Developer from Feb 2021.",
+         [
+             "Joined as an individual contributor, then led the Circles.life Ecom team of four engineers across four PostgreSQL-backed services: OMS, LAAS, SHOP and IMS.",
+             "Built microservices from scratch in Ruby on Rails and Go, with RabbitMQ events, load balancing, Elasticsearch and CI/CD.",
+             "Delivered the POVO SaaS platform for KDDI, integrating the logistics partner ACYAN. Received the Quantum Leap performance award twice.",
+         ]),
+        ("Dec 2019 to Jul 2021", "Imperio Diamond Software Solutions, co-founder",
+         "A startup building software for the diamond trade, run alongside full-time roles.",
+         ["Shipped two cloud products, including a diamond e-commerce platform on Ruby on Rails and PostgreSQL."]),
+        ("Mar 2020 to Feb 2021", "Parity Cube, Software Engineer",
+         "Mumbai.",
+         ["Built and scaled features for DesiDime, an e-commerce deals community, on Ruby on Rails and React.",
+          "Worked on AWS RDS, SQS and Kubernetes resource usage and auto-scaling, and on microservice and event-driven design."]),
+        ("Jul 2017 to Jan 2020", "Mirraw.com, ROR Web and iOS Developer",
+         "ROR Web and iOS Developer from Apr 2018; ROR Web Developer from Jul 2017.",
+         ["Full-stack work across Ruby on Rails, React, iOS (Swift) and Python data-migration scripts, on Heroku with Elasticsearch.",
+          "Shipped Infinite Stories, a full app rebrand and refactor, cart offers, Dynamic Cart and BMGNX promotions."]),
     ]
+    jobs_html = "".join(
+        f'<li><span class="when">{esc(when)}</span><span class="what">{esc(what)}</span><p>{esc(note)}</p>{bullets(items)}</li>'
+        for when, what, note, items in jobs
+    )
+
     skills = [
-        ("Since July 2017", "Ruby on Rails, AWS and PostgreSQL", "The core of my work for over nine years."),
-        ("July 2017 to 2020", "iOS with Swift", "Native apps, including a sales management app and an app for Hajj pilgrims (2019)."),
-        ("January 2018 to May 2019", "Python", "And again since 2026, alongside agentic AI work."),
-        ("Four years, and again in 2026", "React", "Front-end development, now for chat and agent interfaces."),
-        ("Since March 2022", "Engineering management", "Running teams, hiring, planning and delivery."),
-        ("Since March 2026", "Agentic AI development", "Agent backends: orchestration graphs, tool catalogs, retrieval, evaluation and tracing."),
-        ("College", "Java and C++", "Where it started."),
-        ("Along the way", "Kafka, Amazon SQS and Datadog", "Event streaming, queues and production monitoring."),
+        ("Languages and frameworks", "Ruby, Ruby on Rails, Python, Go, JavaScript, React, Swift"),
+        ("AI and agents", "LLM agents, LangGraph, RAG, vector search, Text-to-SQL, MCP, prompt engineering, LLM evaluation, Langfuse, Cursor AI"),
+        ("Databases and caching", "PostgreSQL (query tuning, composite indexes, partitioning), MySQL, MongoDB, Redis, Memcached, Elasticsearch"),
+        ("Cloud and messaging", "AWS (EC2, S3, RDS, IAM, CloudWatch, VPC, SQS, SNS, API Gateway), Google Cloud, Kafka, RabbitMQ, Sidekiq, Shoryuken"),
+        ("DevOps and observability", "Docker, Kubernetes, Jenkins, Semaphore, GitHub, GitLab, Heroku, Nginx, Puma, Datadog, New Relic, Rollbar, PagerDuty, Snyk"),
+        ("Leadership", "Team leadership, hiring, mentoring, OKRs, Scrum, sprint planning, Jira, Confluence"),
     ]
+    skills_html = "".join(f"<div><dt>{esc(k)}</dt><dd>{esc(v)}</dd></div>" for k, v in skills)
+
     certs = [
-        ("Jul 2025", "ACP: Agent Communication Protocol", "DeepLearning.AI"),
-        ("May 2025", "Datadog: APM Metrics and Traces; Incident Management; Infrastructure and Cloud Network Monitoring; Log Explorer; Service Level Objectives and APM Monitoring", "Datadog, five certifications"),
-        ("Jan 2024", "Software Architecture and Technology for Large-Scale Systems", "Udemy"),
-        ("Aug 2022", "AWS S3 Master Course", "Udemy"),
-        ("Jul 2022", "Web Architecture with Go", "Udemy"),
+        ("DeepLearning.AI", "ACP: Agent Communication Protocol", ""),
+        ("Datadog, five certifications", "APM Metrics and Traces; Incident Management; Infrastructure and Cloud Network Monitoring; Log Explorer; SLOs and APM Monitoring", ""),
+        ("Udemy", "Software Architecture and Technology for Large-Scale Systems", ""),
+        ("Udemy", "AWS S3 Master Course; Web Architecture with Go", ""),
     ]
     projects = [
-        ("Apr to May 2020", "Diamond e-commerce website", "Search, filtering and detailed attributes for buying diamonds online. Ruby on Rails, PostgreSQL and JavaScript."),
-        ("Aug to Sep 2019", "SaleSure", "iOS app for sales management."),
-        ("Jul to Aug 2019", "Alrittco", "iOS app for Hajj."),
-        ("Feb 2019", "Eat Bouncing Ball", "A small JavaScript game."),
-        ("Nov 2016 to Mar 2017", "Obstacle-detecting smart cane", "An Arduino-based cane with sensors to help visually impaired people navigate. My final-year engineering project, which placed second runner-up at TCET."),
-    ]
-    awards = [
-        ("Nov 2021", "Q3 Quantum Leap Award", "Circles.life"),
-        ("2017", "JRD Tata Trust scholarship, three times", "It paid three years of my engineering tuition."),
-        ("Mar 2017", "Second runner-up, final-year project", "Thakur College of Engineering and Technology"),
+        ("Since 2026", "Agentic Field Notes", "This site: 80+ articles on building AI agents for production."),
+        ("Imperio Diamond", "Diamond e-commerce web app", "Search, filtering and detailed attributes for buying diamonds online. Ruby on Rails, PostgreSQL, JavaScript."),
+        ("Side project", "MyProperty4U CRM", "Lead management for real estate with property listings and a dynamic home page. Ruby on Rails."),
+        ("2019", "SaleSure and Alrittco", "iOS apps in Swift: sales management, and an app for Hajj pilgrims."),
+        ("For fun", "Rocket Dodge", "A 2D desktop car-racing game in Python with Pygame: steer and change speed to dodge rockets."),
     ]
 
     main = f"""<header class="page-head grid-paper wide">
@@ -1183,7 +1214,7 @@ def write_about() -> None:
       <img src="../assets/images/author/portrait.jpg" alt="Portrait of {esc(AUTHOR_NAME)}" width="720" height="900">
       <div>
         <h1>{esc(AUTHOR_NAME)}</h1>
-        <p class="lead">Engineering Manager at Jisr, building agentic AI systems, with nine years of Ruby on Rails, AWS and PostgreSQL behind it. Based in Mumbai.</p>
+        <p class="lead">Engineering Manager at Jisr. Nine years of Ruby on Rails, React and AWS, leading teams since 2022, and building agentic AI since 2026. Based in Mumbai.</p>
         {social_icons_html()}
       </div>
     </div>
@@ -1192,27 +1223,31 @@ def write_about() -> None:
 <div class="prose">
 <h2>At a glance</h2>
 <dl class="glance">
-  <div><dt>Engineering management</dt><dd>Since March 2022; now at Jisr</dd></div>
-  <div><dt>Ruby on Rails, AWS, PostgreSQL</dt><dd>Since July 2017</dd></div>
-  <div><dt>Agentic AI</dt><dd>Building agents since March 2026</dd></div>
-  <div><dt>Mobile and front end</dt><dd>iOS 2017 to 2020; React for four years, and again in 2026</dd></div>
+  <div><dt>9+ years</dt><dd>Building products with Ruby on Rails, React, PostgreSQL and AWS since July 2017</dd></div>
+  <div><dt>4+ years leading</dt><dd>Teams at Circles.life and Jisr; Engineering Manager since Sep 2026</dd></div>
+  <div><dt>p95 under 250 ms</dt><dd>Down from 1–2 s, through query tuning, composite indexes and caching</dd></div>
+  <div><dt>Agentic AI</dt><dd>Hands-on since March 2026: agents, Text-to-SQL, RAG and AI incident automation</dd></div>
 </dl>
 
 <h2>What I work on now</h2>
-<p>I lead engineering teams and, since March 2026, build agentic AI systems: assistants that plan, call real business APIs on a user's behalf, pause for confirmation and keep conversations consistent under load. Years of Rails work shape how I approach it: business rules belong in the domain services, the agent orchestrates, and every write needs a clear owner.</p>
-<p>I am especially interested in <strong>AI automation</strong>: taking repetitive, multi-step work that people do across several tools and handing it to agents that are observable, testable and safe to run.</p>
+<p>I lead backend and frontend teams on Jisr's Ruby on Rails and React products. Since March 2026 I am also a hands-on member of our agentic AI team, where we learn and build together: agents that call real business APIs, a Text-to-SQL engine for our ATS, and an AI pipeline that triages production errors and opens fix branches. Years of Rails work shape how I approach it: business rules belong in the domain services, the agent orchestrates, and every write needs a clear owner.</p>
+<p>I am especially interested in <strong>AI automation</strong>: handing repetitive, multi-step work to agents that are observable, testable and safe to run.</p>
 
 <h2>Experience</h2>
-<ol class="timeline">{rows(experience)}</ol>
+<ol class="timeline">{jobs_html}</ol>
 
-<h2>Skills over time</h2>
-<ol class="timeline">{rows(skills)}</ol>
+<h2>Skills</h2>
+<dl class="glance">{skills_html}</dl>
 
 <h2>Education</h2>
-<ol class="timeline"><li class="now"><span class="when">2013 to 2017</span><span class="what">Bachelor of Engineering, Thakur College of Engineering and Technology, Mumbai</span><p>Supported by the JRD Tata Trust scholarship for three years.</p></li></ol>
+<ol class="timeline"><li class="now"><span class="when">2013 to 2017</span><span class="what">Bachelor of Engineering, Computer Science, Thakur College of Engineering and Technology, University of Mumbai</span><p>CGPA 9.36 out of 10, ranked third in the institute. Supported by the JRD Tata Trust scholarship three times.</p></li></ol>
 
-<h2>Publication</h2>
-<p><strong>Improved KNN algorithm</strong>, International Journal of Computer Applications (IJCA), November 2017.</p>
+<h2>Research and awards</h2>
+<ul>
+  <li>Two research papers in the International Journal of Computer Applications (IJCA), written with a professor during engineering: <strong>Improved KNN Algorithm</strong> (November 2017) and a paper on LSTM networks.</li>
+  <li>Quantum Leap performance award, twice, at Circles.life.</li>
+  <li>Second runner-up for the final-year engineering project: an Arduino smart cane that helps visually impaired people navigate.</li>
+</ul>
 
 <h2>Certifications</h2>
 <ol class="timeline">{rows(certs)}</ol>
@@ -1220,11 +1255,11 @@ def write_about() -> None:
 <h2>Projects</h2>
 <ol class="timeline">{rows(projects)}</ol>
 
-<h2>Honours and awards</h2>
-<ol class="timeline">{rows(awards)}</ol>
+<h2>More writing</h2>
+<p>Besides this site, I write about engineering and AI automation on my <a href="https://www.blogger.com/profile/09898046087967419538" target="_blank" rel="noopener">Blogger profile</a>, including how I built the <a href="https://algorithm-analysis-shubham-mishra.blogspot.com/2026/03/ai-automation-how-i-built-end-to-end-ai.html" target="_blank" rel="noopener">end-to-end AI incident automation</a> and the <a href="https://algorithm-analysis-shubham-mishra.blogspot.com/2026/05/body-font-family-arial-sans-serif-line.html" target="_blank" rel="noopener">Text-to-SQL engine</a>.</p>
 
 <h2>About this site</h2>
-<p>Agentic Field Notes is where I write down patterns from building agent backends: the <a href="../agentic-development/index.html">20-step path</a> from first boundary to golden tests, <a href="../ai-engineer-essentials/index.html">AI engineer essentials</a>, and deeper notes on <a href="../graph-orchestration/index.html">graph orchestration</a>, <a href="../data-patterns/index.html">MongoDB patterns</a>, <a href="../rag-knowledge/index.html">retrieval</a>, <a href="../evaluation/index.html">evaluation</a> and <a href="../langfuse-lab/index.html">tracing with Langfuse</a>. Your reading progress is stored in a cookie in your own browser and is never sent anywhere. The source is on <a href="{REPO_URL}">GitHub</a>.</p>
+<p>Agentic Field Notes collects patterns from building agent backends: the <a href="../agentic-development/index.html">20-step path</a>, <a href="../ai-engineer-essentials/index.html">AI engineer essentials</a>, and deeper notes on <a href="../graph-orchestration/index.html">graph orchestration</a>, <a href="../data-patterns/index.html">MongoDB patterns</a>, <a href="../rag-knowledge/index.html">retrieval</a>, <a href="../evaluation/index.html">evaluation</a> and <a href="../langfuse-lab/index.html">tracing with Langfuse</a>. Your reading progress stays in a cookie in your own browser. The source is on <a href="{REPO_URL}">GitHub</a>.</p>
 
 <h2>Find me elsewhere</h2>
 <ul class="profile-list">{profiles}</ul>
@@ -1239,7 +1274,7 @@ def write_about() -> None:
     (ROOT / "about" / "index.html").write_text(
         document(
             title=f"About {AUTHOR_NAME}",
-            description=f"{AUTHOR_NAME}: Engineering Manager at Jisr building agentic AI systems, with Ruby on Rails, AWS and PostgreSQL since 2017, iOS, React and Python.",
+            description=f"{AUTHOR_NAME}: Engineering Manager at Jisr with 9+ years of Ruby on Rails, React and AWS, leading teams since 2022 and building agentic AI since 2026.",
             canonical_path="/about/",
             depth=1,
             main=main,

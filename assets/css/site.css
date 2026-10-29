@@ -1826,3 +1826,20 @@ a.byline:hover {
     visibility: hidden;
   }
 }
+
+/* About page: bullets inside the experience timeline, Go bar */
+.timeline li ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.timeline li ul li {
+  padding: 0;
+  margin-bottom: 0.3rem;
+}
+
+.timeline li ul li::before {
+  content: none;
+}
+
+.j-go { background: linear-gradient(90deg, #00a0b0, #4fd1c5); }
